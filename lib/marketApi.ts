@@ -42,7 +42,7 @@ export async function getBitcoinOHLC(days: number = 7): Promise<number[][] | nul
         }
 
         const res = await fetch(
-            `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=${limit}`,
+            `https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=${limit}`,
             { next: { revalidate: 120 } }
         );
         if (!res.ok) return null;
