@@ -1,0 +1,24 @@
+.gridDashboard {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.col4 {
+  grid-column: span 12;
+}
+
+.col8 {
+  grid-column: span 12;
+}
+
+@media (min-width: 1024px) {
+  .col4 {
+    grid-column: span 4;
+  }
+
+  .col8 {
+    grid-column: span 8;
+  }
+}

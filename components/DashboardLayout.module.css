@@ -1,0 +1,145 @@
+.layoutContainer {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    padding-left: 280px;
+    /* Space for the fixed sidebar */
+}
+
+.mainContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    gap: 2rem;
+    overflow-y: auto;
+}
+
+.sidebar {
+    width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-light);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 10;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.brandIcon {
+    color: var(--accent-primary);
+    filter: drop-shadow(0 0 8px rgba(247, 147, 26, 0.6));
+    animation: pulseLogo 3s infinite alternate;
+}
+
+@keyframes pulseLogo {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 8px rgba(247, 147, 26, 0.4));
+    }
+
+    100% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 15px rgba(247, 147, 26, 0.8));
+    }
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+}
+
+.navItem:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    transform: translateX(4px);
+}
+
+.navItemActive {
+    color: var(--accent-primary);
+    background: var(--bg-tertiary);
+    box-shadow: inset 3px 0 0 0 var(--accent-primary);
+}
+
+.navItemActive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(247, 147, 26, 0.1) 0%, transparent 100%);
+    z-index: 0;
+}
+
+.navIcon,
+.navText {
+    position: relative;
+    z-index: 1;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.walletBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--bg-tertiary);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid var(--border-light);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.walletBadge:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
+}
+
+.networkDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    box-shadow: 0 0 8px var(--accent-primary);
+}

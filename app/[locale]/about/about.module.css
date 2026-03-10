@@ -1,0 +1,144 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 4rem;
+}
+
+.hero {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: radial-gradient(circle at top, rgba(247, 147, 26, 0.15) 0%, transparent 70%);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-light);
+    position: relative;
+    overflow: hidden;
+}
+
+.heroIcon {
+    color: var(--accent-primary);
+    margin-bottom: 1.5rem;
+    animation: float 4s ease-in-out infinite;
+    display: inline-block;
+}
+
+.heroTitle {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.05em;
+    margin-bottom: 1rem;
+}
+
+.heroSubtitle {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 10px rgba(247, 147, 26, 0.3));
+    }
+
+    50% {
+        transform: translateY(-10px);
+        filter: drop-shadow(0 0 25px rgba(247, 147, 26, 0.6));
+    }
+
+    100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 10px rgba(247, 147, 26, 0.3));
+    }
+}
+
+.gridCards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.explainCard {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-panel);
+    transition: transform var(--transition-bounce), box-shadow var(--transition-fast);
+    position: relative;
+}
+
+.explainCard:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px -15px var(--accent-glow);
+    border-color: var(--border-accent);
+}
+
+.cardIcon {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    background: rgba(247, 147, 26, 0.1);
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.cardText {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+.comparisonSection {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    padding: 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.comparisonSection::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, transparent 50%, rgba(16, 185, 129, 0.05) 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.compContent {
+    position: relative;
+    z-index: 1;
+}
+
+.highlightText {
+    background: linear-gradient(90deg, #f7931a 0%, #ffae42 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+}

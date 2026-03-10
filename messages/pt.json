@@ -1,0 +1,84 @@
+{
+    "Dashboard": {
+        "title": "Dashboard Autumn Runes",
+        "description": "Gerencie seus ativos Bitcoin Runes com rastreamento em tempo real.",
+        "brand": "Autumn Runes",
+        "nav_dashboard": "Painel de Controle",
+        "nav_portfolio": "Meu Portfólio",
+        "nav_my_runes": "Minhas Runas",
+        "nav_about": "Sobre as Runas",
+        "nav_marketplace": "Mercado",
+        "nav_history": "Histórico",
+        "header_title": "Portfólio Runes",
+        "header_subtitle": "Gerencie seus ativos OP_RETURN com segurança.",
+        "total_balance": "Saldo Total",
+        "bitcoin": "Bitcoin (BTC)",
+        "runes": "Runes",
+        "btn_receive": "Receber",
+        "btn_send": "Enviar",
+        "overview": "Visão Geral",
+        "my_assets": "Meus Ativos Runes",
+        "search_placeholder": "Buscar por nome ou ticker...",
+        "recent_activity": "Atividade Recente",
+        "view_all": "Ver Tudo"
+    },
+    "About": {
+        "title": "O que são as Runas (Runes)?",
+        "subtitle": "A maneira mais eficiente de emitir tokens na principal blockchain do mundo.",
+        "section_1_title": "UTXOs, Não Smart Contracts",
+        "section_1_desc": "Diferente do ERC-20 da rede Ethereum, as Runas vivem diretamente nos UTXOs (Transações Não Gastas) do Bitcoin. Pense nos UTXOs como moedas digitais na sua carteira. As Runas viajam nestas moedas.",
+        "section_2_title": "A Mágica do OP_RETURN",
+        "section_2_desc": "As informações sobre seus tokens são gravadas num campo especial da transação Bitcoin chamado OP_RETURN. Isso evita sobrecarregar a rede, tornando as Runas leves e elegantes.",
+        "vs_brc20_title": "Por que é melhor que BRC-20?",
+        "vs_brc20_desc": "O BRC-20 grava arquivos JSON pesados na blockchain (protocolo Ordinals), criando 'lixo' na rede. As Runas são nativas, deixam menos rastros e são mais baratas para transacionar.",
+        "wallet_role_title": "O papel da Autumn Softwares",
+        "wallet_role_desc": "Como a rede Bitcoin só entende 'BTC', ela não sabe nativamente o que é uma Runa. Nossa carteira atua como um Indexador. Lemos as mensagens OP_RETURN, calculamos seus saldos e protegemos os UTXOs que carregam suas Runas para não serem gastos acidentalmente pagando taxas da rede."
+    },
+    "Wallet": {
+        "title": "Minha Carteira",
+        "address_copied": "Endereço copiado!",
+        "copy_address": "Copiar Endereço",
+        "total_value": "Valor Total",
+        "send": "Enviar",
+        "receive": "Receber",
+        "swap": "Trocar",
+        "asset_runes": "Portfólio de Runas",
+        "no_assets": "Nenhum ativo encontrado",
+        "unit_price": "Preço Unitário",
+        "wallet_not_connected": "Carteira não conectada",
+        "wallet_input_description": "Insira qualquer endereço Bitcoin para visualizar seus saldos de Runes.",
+        "wallet_input_placeholder": "Endereço Bitcoin (ex: bc1...)",
+        "wallet_input_empty": "Por favor, insira um endereço",
+        "wallet_input_invalid": "Formato de endereço Bitcoin inválido",
+        "wallet_input_button": "Buscar Endereço"
+    },
+    "Market": {
+        "title": "Visão de Mercado",
+        "subtitle": "Descubra e acompanhe os principais tokens Runes.",
+        "global_supply": "Fornecimento Total",
+        "global_volume": "Volume 24h",
+        "global_transactions": "Transações",
+        "top_runes": "Principais Runas",
+        "highlight_title": "Destaque Bitcoin",
+        "highlight_desc": "DOG•GO•TO•THE•MOON está liderando o ecossistema Runes.",
+        "nav_home": "Início",
+        "nav_portfolio": "Meu Portfólio"
+    },
+    "Marketplace": {
+        "title": "Mercado (Marketplace)",
+        "subtitle": "Descubra, compre e venda Runas com segurança na camada 1 do Bitcoin.",
+        "beta_alert": "Negociações em Beta",
+        "beta_desc": "O mercado descentralizado está passando por auditorias de segurança. As trocas serão ativadas em breve.",
+        "connect_prompt": "Conecte sua carteira para acesso antecipado quando as negociações começarem."
+    },
+    "History": {
+        "title": "Histórico de Transações",
+        "subtitle": "Revise todas as atividades, mints e transferências anteriores associadas ao seu endereço.",
+        "full_log": "Registro Completo",
+        "no_history": "Nenhuma transação encontrada para este endereço."
+    },
+    "Chart": {
+        "title": "Visão Geral do Bitcoin",
+        "hover_hint": "Passe o mouse sobre as velas para ver dados OHLC"
+    }
+}

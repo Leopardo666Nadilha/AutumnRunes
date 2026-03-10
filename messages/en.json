@@ -1,0 +1,84 @@
+{
+    "Dashboard": {
+        "title": "Autumn Runes Dashboard",
+        "description": "Manage your Bitcoin Runes assets with real-time tracking.",
+        "brand": "Autumn Runes",
+        "nav_dashboard": "Dashboard",
+        "nav_portfolio": "My Portfolio",
+        "nav_my_runes": "My Runes",
+        "nav_about": "About Runes",
+        "nav_marketplace": "Marketplace",
+        "nav_history": "History",
+        "header_title": "Runes Portfolio",
+        "header_subtitle": "Manage your OP_RETURN assets securely.",
+        "total_balance": "Total Balance",
+        "bitcoin": "Bitcoin (BTC)",
+        "runes": "Runes",
+        "btn_receive": "Receive",
+        "btn_send": "Send",
+        "overview": "Overview",
+        "my_assets": "My Runes Assets",
+        "search_placeholder": "Search by name or ticker...",
+        "recent_activity": "Recent Activity",
+        "view_all": "View All"
+    },
+    "About": {
+        "title": "What are Runes?",
+        "subtitle": "The most efficient way to issue tokens on the ultimate blockchain.",
+        "section_1_title": "UTXOs, Not Smart Contracts",
+        "section_1_desc": "Unlike Ethereum's ERC-20, Runes live directly in your Bitcoin UTXOs (Unspent Transaction Outputs). Think of UTXOs like digital coins in your wallet. Runes piggyback on these coins.",
+        "section_2_title": "OP_RETURN Magic",
+        "section_2_desc": "Information about your tokens is etched into a special field of a Bitcoin transaction called OP_RETURN. This avoids bloating the network, making Runes elegant and lightweight.",
+        "vs_brc20_title": "Why better than BRC-20?",
+        "vs_brc20_desc": "BRC-20 records heavy JSON files into the blockchain (Ordinals protocol), creating 'junk' data. Runes are native, leave a smaller footprint, and are cheaper to transact.",
+        "wallet_role_title": "Autumn Softwares' Role",
+        "wallet_role_desc": "Because the Bitcoin network only sees 'BTC', it doesn't natively know what a Rune is. Our wallet acts as an indexer. We read the OP_RETURN messages, calculate your balances, and protect your Rune-carrying UTXOs from being accidentally spent as regular network fees."
+    },
+    "Wallet": {
+        "title": "My Wallet",
+        "address_copied": "Address copied!",
+        "copy_address": "Copy Address",
+        "total_value": "Total Value",
+        "send": "Send",
+        "receive": "Receive",
+        "swap": "Swap",
+        "asset_runes": "Runes Portfolio",
+        "no_assets": "No assets found",
+        "unit_price": "Unit Price",
+        "wallet_not_connected": "Wallet Not Connected",
+        "wallet_input_description": "Enter any Bitcoin address to view its Runes balances, or connect a compatible wallet extension.",
+        "wallet_input_placeholder": "Bitcoin address (e.g. bc1...)",
+        "wallet_input_empty": "Please enter an address",
+        "wallet_input_invalid": "Invalid Bitcoin address format",
+        "wallet_input_button": "View Address"
+    },
+    "Market": {
+        "title": "Market Overview",
+        "subtitle": "Discover and track the top Runes tokens.",
+        "global_supply": "Total Supply",
+        "global_volume": "24h Volume",
+        "global_transactions": "Transactions",
+        "top_runes": "Top Runes",
+        "highlight_title": "Bitcoin Highlight",
+        "highlight_desc": "DOG•GO•TO•THE•MOON is leading the Runes ecosystem.",
+        "nav_home": "Home",
+        "nav_portfolio": "My Portfolio"
+    },
+    "Marketplace": {
+        "title": "Marketplace",
+        "subtitle": "Discover, buy, and sell Runes safely on L1.",
+        "beta_alert": "Beta Trading",
+        "beta_desc": "The decentralized marketplace is currently undergoing security audits. Trading will be enabled soon.",
+        "connect_prompt": "Connect your wallet to get early access when trading goes live."
+    },
+    "History": {
+        "title": "Transaction History",
+        "subtitle": "Review all past activities, mints, and transfers associated with your connected address.",
+        "full_log": "Full Transaction Log",
+        "no_history": "No transactions found for this address."
+    },
+    "Chart": {
+        "title": "Bitcoin Overview",
+        "hover_hint": "Hover over candles to see OHLC data"
+    }
+}

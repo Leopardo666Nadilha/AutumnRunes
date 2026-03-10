@@ -1,0 +1,160 @@
+.inputCard {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: 3rem;
+    box-shadow: var(--shadow-panel);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1.5rem;
+    max-width: 600px;
+    margin: 4rem auto;
+    position: relative;
+    overflow: hidden;
+}
+
+.inputCard::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(247, 147, 26, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.iconContainer {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(247, 147, 26, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(247, 147, 26, 0.2);
+    box-shadow: 0 0 30px rgba(247, 147, 26, 0.15);
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.walletIcon {
+    color: var(--accent-primary);
+}
+
+.title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    max-width: 400px;
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+}
+
+.form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.inputWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    transition: color var(--transition-fast);
+}
+
+.input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem 1.25rem 3.5rem;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-family: monospace;
+    transition: all var(--transition-fast);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px rgba(247, 147, 26, 0.2);
+}
+
+.input:focus+.searchIcon {
+    color: var(--accent-primary);
+}
+
+.inputError {
+    border-color: var(--status-danger);
+}
+
+.inputError:focus {
+    border-color: var(--status-danger);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.errorMessage {
+    color: var(--status-danger);
+    font-size: 0.875rem;
+    margin-top: -0.5rem;
+    text-align: left;
+    padding-left: 1rem;
+}
+
+.submitBtn {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border: none;
+    padding: 1.25rem;
+    border-radius: var(--radius-lg);
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 15px rgba(247, 147, 26, 0.3);
+}
+
+.submitBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(247, 147, 26, 0.4);
+    background: var(--accent-secondary);
+}
+
+.submitBtn:active {
+    transform: translateY(0);
+}
