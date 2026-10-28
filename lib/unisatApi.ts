@@ -48,25 +48,6 @@ export async function getRunesBalanceList(address: string) {
 }
 
 /**
- * Fetches recent history for an address.
- */
-export async function getAddressHistory(address: string) {
-    if (!isValidBitcoinAddress(address)) return null;
-    try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/history`, {
-            headers: getHeaders(),
-            next: { revalidate: 60 },
-        });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.data ?? null;
-    } catch (error) {
-        console.error("getAddressHistory error:", error);
-        return null;
-    }
-}
-
-/**
  * Fetches top Runes with their stats (holders, transactions, supply, etc.)
  * Real endpoint: GET /v1/indexer/runes/info-list?start=0&limit=N
  * Response shape: { data: { detail: [...], total: number, height: number } }

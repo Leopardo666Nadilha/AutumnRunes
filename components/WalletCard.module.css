@@ -123,6 +123,7 @@
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
+    text-decoration: none;
     transition: all var(--transition-fast);
 }
 

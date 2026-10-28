@@ -22,7 +22,7 @@ export default function LocaleSwitcher() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-tertiary)', padding: '0.25rem 0.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
             <Globe size={16} color="var(--text-muted)" />
             <select
-                defaultValue={locale}
+                value={locale}
                 disabled={isPending}
                 onChange={onSelectChange}
                 style={{

@@ -1,7 +1,8 @@
 import React from 'react';
 import { getTranslations } from 'next-intl/server';
-import { ShieldCheck, Wallet, ArrowLeftRight } from 'lucide-react';
+import { Construction, ArrowLeftRight } from 'lucide-react';
 import { DashboardLayout } from '../../../components/DashboardLayout';
+import { Link } from '@/i18n/routing';
 import styles from './Marketplace.module.css';
 
 export default async function MarketplacePage() {
@@ -19,8 +20,8 @@ export default async function MarketplacePage() {
                         </div>
 
                         <div className={styles.badge}>
-                            <ShieldCheck size={16} />
-                            {t('beta_alert')}
+                            <Construction size={16} />
+                            {t('construction_badge')}
                         </div>
 
                         <h1 className={styles.title}>{t('title')}</h1>
@@ -28,16 +29,12 @@ export default async function MarketplacePage() {
                         <p className={styles.subtitle}>
                             {t('subtitle')}
                             <br /><br />
-                            {t('beta_desc')}
+                            {t('construction_desc')}
                         </p>
 
-                        <button className={styles.primaryBtn}>
-                            <Wallet size={20} />
-                            Connect Wallet
-                        </button>
-                        <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                            {t('connect_prompt')}
-                        </p>
+                        <Link href="/portfolio" className={styles.primaryBtn}>
+                            {t('back_to_portfolio')}
+                        </Link>
                     </div>
                 </div>
             </div>

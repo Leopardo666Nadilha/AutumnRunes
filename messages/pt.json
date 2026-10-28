@@ -1,11 +1,7 @@
 {
     "Dashboard": {
-        "title": "Dashboard Autumn Runes",
-        "description": "Gerencie seus ativos Bitcoin Runes com rastreamento em tempo real.",
         "brand": "Autumn Runes",
-        "nav_dashboard": "Painel de Controle",
         "nav_portfolio": "Meu Portfólio",
-        "nav_my_runes": "Minhas Runas",
         "nav_about": "Sobre as Runas",
         "nav_marketplace": "Mercado",
         "nav_history": "Histórico",
@@ -16,11 +12,19 @@
         "runes": "Runes",
         "btn_receive": "Receber",
         "btn_send": "Enviar",
-        "overview": "Visão Geral",
         "my_assets": "Meus Ativos Runes",
         "search_placeholder": "Buscar por nome ou ticker...",
-        "recent_activity": "Atividade Recente",
-        "view_all": "Ver Tudo"
+        "nav_home": "Início",
+        "not_connected": "Não conectado",
+        "go_to_portfolio": "Ir para o Portfólio",
+        "copy_address": "Copiar endereço",
+        "disconnect": "Desconectar endereço",
+        "col_asset": "Ativo",
+        "col_balance": "Saldo",
+        "col_price": "Preço",
+        "col_value": "Valor",
+        "no_runes": "Nenhuma Runa encontrada para este endereço.",
+        "no_runes_match": "Nenhuma Runa encontrada para \"{term}\""
     },
     "About": {
         "title": "O que são as Runas (Runes)?",
@@ -35,16 +39,6 @@
         "wallet_role_desc": "Como a rede Bitcoin só entende 'BTC', ela não sabe nativamente o que é uma Runa. Nossa carteira atua como um Indexador. Lemos as mensagens OP_RETURN, calculamos seus saldos e protegemos os UTXOs que carregam suas Runas para não serem gastos acidentalmente pagando taxas da rede."
     },
     "Wallet": {
-        "title": "Minha Carteira",
-        "address_copied": "Endereço copiado!",
-        "copy_address": "Copiar Endereço",
-        "total_value": "Valor Total",
-        "send": "Enviar",
-        "receive": "Receber",
-        "swap": "Trocar",
-        "asset_runes": "Portfólio de Runas",
-        "no_assets": "Nenhum ativo encontrado",
-        "unit_price": "Preço Unitário",
         "wallet_not_connected": "Carteira não conectada",
         "wallet_input_description": "Insira qualquer endereço Bitcoin para visualizar seus saldos de Runes.",
         "wallet_input_placeholder": "Endereço Bitcoin (ex: bc1...)",
@@ -53,32 +47,45 @@
         "wallet_input_button": "Buscar Endereço"
     },
     "Market": {
-        "title": "Visão de Mercado",
-        "subtitle": "Descubra e acompanhe os principais tokens Runes.",
-        "global_supply": "Fornecimento Total",
-        "global_volume": "Volume 24h",
-        "global_transactions": "Transações",
         "top_runes": "Principais Runas",
         "highlight_title": "Destaque Bitcoin",
         "highlight_desc": "DOG•GO•TO•THE•MOON está liderando o ecossistema Runes.",
-        "nav_home": "Início",
-        "nav_portfolio": "Meu Portfólio"
+        "runes_etched": "Runas Criadas",
+        "runes_etched_hint": "Desde o início",
+        "total_mints": "Total de Mints",
+        "total_holders": "Holders",
+        "top5_hint": "Top 5 Runas",
+        "market_cap": "Valor de Mercado",
+        "volume_24h": "Volume 24h",
+        "change_24h": "Variação 24h",
+        "col_rune": "Runa",
+        "col_holders": "Holders",
+        "col_transactions": "Transações",
+        "no_runes_data": "Nenhum dado de Runas disponível no momento."
     },
     "Marketplace": {
         "title": "Mercado (Marketplace)",
         "subtitle": "Descubra, compre e venda Runas com segurança na camada 1 do Bitcoin.",
-        "beta_alert": "Negociações em Beta",
-        "beta_desc": "O mercado descentralizado está passando por auditorias de segurança. As trocas serão ativadas em breve.",
-        "connect_prompt": "Conecte sua carteira para acesso antecipado quando as negociações começarem."
+        "construction_badge": "Em Construção",
+        "construction_desc": "O mercado ainda está em construção e não tem previsão de lançamento. Receber, enviar e negociar Runas ficará disponível aqui quando ele for lançado.",
+        "back_to_portfolio": "Voltar ao Portfólio"
     },
     "History": {
         "title": "Histórico de Transações",
-        "subtitle": "Revise todas as atividades, mints e transferências anteriores associadas ao seu endereço.",
-        "full_log": "Registro Completo",
-        "no_history": "Nenhuma transação encontrada para este endereço."
+        "subtitle": "Revise todas as atividades, mints e transferências anteriores associadas ao seu endereço."
     },
     "Chart": {
         "title": "Visão Geral do Bitcoin",
         "hover_hint": "Passe o mouse sobre as velas para ver dados OHLC"
+    },
+    "Transactions": {
+        "recent_activity": "Atividade Recente",
+        "view_all": "Ver Tudo",
+        "type_received": "Recebido",
+        "type_sent": "Enviado",
+        "type_runes": "Transferência de Runas",
+        "pending": "Pendente",
+        "no_history": "Nenhuma transação encontrada para este endereço.",
+        "load_error": "Não foi possível carregar as transações. Tente novamente mais tarde."
     }
 }

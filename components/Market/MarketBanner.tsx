@@ -2,25 +2,33 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Flame, TrendingUp, Loader2 } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown } from 'lucide-react';
 import styles from './MarketBanner.module.css';
 import { getDogTokenMarketData } from '../../lib/marketApi';
-import { Skeleton } from '../Skeleton';
+
+interface DogMarketData {
+    usd?: number;
+    usd_market_cap?: number;
+    usd_24h_vol?: number;
+    usd_24h_change?: number;
+}
 
 export const MarketBanner: React.FC = () => {
     const t = useTranslations('Market');
-    const [dogData, setDogData] = useState<any>(null);
+    const [dogData, setDogData] = useState<DogMarketData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchDog() {
-            setIsLoading(true);
-            const data = await getDogTokenMarketData();
+        let cancelled = false;
+        getDogTokenMarketData().then((data) => {
+            if (cancelled) return;
             setDogData(data);
             setIsLoading(false);
-        }
-        fetchDog();
+        });
+        return () => { cancelled = true; };
     }, []);
+
+    const change = dogData?.usd_24h_change;
 
     return (
         <div className={styles.bannerContainer}>
@@ -47,21 +55,23 @@ export const MarketBanner: React.FC = () => {
 
                 <div className={styles.statsRow}>
                     <div className={styles.statItem}>
-                        <span className={styles.statLabel}>Market Cap</span>
+                        <span className={styles.statLabel}>{t('market_cap')}</span>
                         <span className={styles.statValue}>
                             {isLoading ? <span>…</span> : dogData?.usd_market_cap ? `$${(dogData.usd_market_cap / 1000000).toFixed(2)}M` : '—'}
                         </span>
                     </div>
                     <div className={styles.statItem}>
-                        <span className={styles.statLabel}>24h Vol</span>
+                        <span className={styles.statLabel}>{t('volume_24h')}</span>
                         <span className={styles.statValue}>
                             {isLoading ? <span>…</span> : dogData?.usd_24h_vol ? `$${(dogData.usd_24h_vol / 1000000).toFixed(2)}M` : '—'}
                         </span>
                     </div>
                     <div className={styles.statItem}>
-                        <span className={styles.statLabel}>Change</span>
-                        <span className={styles.statValue} style={{ color: (dogData?.usd_24h_change ?? 0) >= 0 ? 'var(--status-success)' : 'var(--status-danger)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            {isLoading ? <span>…</span> : dogData ? <><TrendingUp size={18} /> {dogData.usd_24h_change >= 0 ? '+' : ''}{dogData.usd_24h_change?.toFixed(2)}%</> : '—'}
+                        <span className={styles.statLabel}>{t('change_24h')}</span>
+                        <span className={styles.statValue} style={{ color: (change ?? 0) >= 0 ? 'var(--status-success)' : 'var(--status-danger)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {isLoading ? <span>…</span> : typeof change === 'number'
+                                ? <>{change >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />} {change >= 0 ? '+' : ''}{change.toFixed(2)}%</>
+                                : '—'}
                         </span>
                     </div>
                 </div>
@@ -69,6 +79,8 @@ export const MarketBanner: React.FC = () => {
 
             <div className={styles.visualSide}>
                 <div className={styles.dogCircle} style={{ overflow: 'hidden' }}>
+                    {/* Plain <img>: next/image would route this through the image optimizer for a single static logo */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                         src="https://coin-images.coingecko.com/coins/images/37352/large/DOGGOTOTHEMOON.png"
                         alt="DOG•GO•TO•THE•MOON"

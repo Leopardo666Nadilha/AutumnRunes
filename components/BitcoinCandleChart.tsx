@@ -39,14 +39,11 @@ export const BitcoinCandleChart: React.FC = () => {
     const [btcPrice, setBtcPrice] = useState<number | null>(null);
     const [btcChange, setBtcChange] = useState<number | null>(null);
     const [hoveredOHLC, setHoveredOHLC] = useState<OHLCValues | null>(null);
-    const [isMounted, setIsMounted] = useState(false);
+    const requestIdRef = useRef(0);
 
-    // Mark as mounted on client
-    useEffect(() => { setIsMounted(true); }, []);
-
-    // Initialize chart AFTER mount and container is available
+    // Initialize chart once the container is available (effects only run on the client)
     useEffect(() => {
-        if (!isMounted || !chartContainerRef.current) return;
+        if (!chartContainerRef.current) return;
 
         const container = chartContainerRef.current;
 
@@ -146,26 +143,26 @@ export const BitcoinCandleChart: React.FC = () => {
             chartInstanceRef.current = null;
             seriesInstanceRef.current = null;
         };
-    }, [isMounted]);
+    }, []);
 
     // Fetch market data (price/change)
     useEffect(() => {
-        async function fetchPrice() {
-            const market = await getBitcoinMarketData();
-            if (market) {
-                setBtcPrice(market.usd);
-                setBtcChange(market.usd_24h_change);
-            }
-        }
-        fetchPrice();
+        let cancelled = false;
+        getBitcoinMarketData().then((market) => {
+            if (cancelled || !market) return;
+            setBtcPrice(typeof market.usd === 'number' ? market.usd : null);
+            setBtcChange(typeof market.usd_24h_change === 'number' ? market.usd_24h_change : null);
+        });
+        return () => { cancelled = true; };
     }, []);
 
     // Fetch OHLC data when interval changes
     const fetchOHLC = useCallback(async (days: number) => {
-        setIsLoading(true);
-        setHoveredOHLC(null);
+        // Ignore responses from intervals the user already switched away from
+        const requestId = ++requestIdRef.current;
         try {
             const raw = await getBitcoinOHLC(days);
+            if (requestId !== requestIdRef.current) return;
             if (raw && raw.length > 0 && seriesInstanceRef.current && chartInstanceRef.current) {
                 const candles: CandlestickData<Time>[] = raw.map((item: number[]) => ({
                     time: (Math.floor(item[0] / 1000)) as Time,
@@ -180,18 +177,18 @@ export const BitcoinCandleChart: React.FC = () => {
         } catch (err) {
             console.error('[BitcoinCandleChart] fetchOHLC error:', err);
         }
-        setIsLoading(false);
+        if (requestId === requestIdRef.current) setIsLoading(false);
     }, []);
 
-    // Trigger OHLC fetch after chart is initialized
+    // Effects run in order, so the chart above is already created here
     useEffect(() => {
-        if (!isMounted) return;
-        // Wait for chart to be initialized
-        const timer = setTimeout(() => fetchOHLC(selectedInterval), 200);
-        return () => clearTimeout(timer);
-    }, [selectedInterval, fetchOHLC, isMounted]);
+        fetchOHLC(selectedInterval);
+    }, [selectedInterval, fetchOHLC]);
 
     const handleIntervalChange = (days: number) => {
+        if (days === selectedInterval) return;
+        setIsLoading(true);
+        setHoveredOHLC(null);
         setSelectedInterval(days);
     };
 
@@ -210,9 +207,11 @@ export const BitcoinCandleChart: React.FC = () => {
                     {btcPrice !== null ? (
                         <>
                             <span className={styles.priceValue}>{formatPrice(btcPrice)}</span>
-                            <span className={`${styles.priceChange} ${(btcChange ?? 0) >= 0 ? styles.changePositive : styles.changeNegative}`}>
-                                {(btcChange ?? 0) >= 0 ? '+' : ''}{btcChange?.toFixed(2)}%
-                            </span>
+                            {btcChange !== null && (
+                                <span className={`${styles.priceChange} ${btcChange >= 0 ? styles.changePositive : styles.changeNegative}`}>
+                                    {btcChange >= 0 ? '+' : ''}{btcChange.toFixed(2)}%
+                                </span>
+                            )}
                         </>
                     ) : (
                         <Loader2 size={20} className={styles.spinner} />

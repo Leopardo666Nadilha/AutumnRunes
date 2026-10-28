@@ -7,30 +7,29 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/routing';
 import styles from './DashboardLayout.module.css';
 import LocaleSwitcher from './LocaleSwitcher';
-import { useRouter } from '@/i18n/routing';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
 const WalletBadge = () => {
+    const t = useTranslations('Dashboard');
     const { isConnected, shortenedAddress } = useWallet();
-    const router = useRouter();
 
     if (!isConnected) {
         return (
-            <div className={styles.walletBadge} style={{ border: '1px dashed var(--border-light)', cursor: 'pointer' }} onClick={() => router.push('/portfolio')}>
+            <Link href="/portfolio" className={styles.walletBadge} style={{ border: '1px dashed var(--border-light)', textDecoration: 'none' }}>
                 <Wallet size={16} className="text-muted" />
-                <span className="text-secondary" style={{ fontSize: '0.875rem' }}>Not Connected</span>
-            </div>
+                <span className="text-secondary" style={{ fontSize: '0.875rem' }}>{t('not_connected')}</span>
+            </Link>
         );
     }
 
     return (
-        <div className={styles.walletBadge} onClick={() => router.push('/portfolio')} title="Go to Portfolio" style={{ cursor: 'pointer' }}>
+        <Link href="/portfolio" className={styles.walletBadge} title={t('go_to_portfolio')} style={{ textDecoration: 'none' }}>
             <div className={styles.networkDot}></div>
             <span className="text-secondary">{shortenedAddress}</span>
-        </div>
+        </Link>
     );
 };
 
@@ -40,11 +39,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     const pathname = usePathname();
 
     // Helper function to check if a navigation item is active
-    const isActive = (path: string) => {
-        if (path === '/' && pathname !== '/') return false;
-        if (path !== '/' && pathname.startsWith(path)) return true;
-        return pathname === path;
-    };
+    const isActive = (path: string) =>
+        path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`);
 
     return (
         <div className={styles.layoutContainer}>
@@ -58,7 +54,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <nav className={styles.nav}>
                     <Link href="/" className={`${styles.navItem} ${isActive('/') ? styles.navItemActive : ''}`}>
                         <LayoutDashboard className={styles.navIcon} size={20} />
-                        <span className={styles.navText}>Home</span>
+                        <span className={styles.navText}>{t('nav_home')}</span>
                     </Link>
                     <Link href="/portfolio" className={`${styles.navItem} ${isActive('/portfolio') ? styles.navItemActive : ''}`}>
                         <Wallet className={styles.navIcon} size={20} />

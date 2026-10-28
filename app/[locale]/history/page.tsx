@@ -1,7 +1,7 @@
 import React from 'react';
 import { getTranslations } from 'next-intl/server';
 import { DashboardLayout } from '../../../components/DashboardLayout';
-import { TransactionsList } from '../../../components/TransactionsList';
+import { HistoryContent } from '../../../components/HistoryContent';
 import styles from '../page.module.css';
 
 export default async function HistoryPage() {
@@ -19,7 +19,7 @@ export default async function HistoryPage() {
                         </p>
                     </div>
 
-                    <TransactionsList />
+                    <HistoryContent />
 
                 </section>
             </div>

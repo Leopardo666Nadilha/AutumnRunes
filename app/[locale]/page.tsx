@@ -1,14 +1,11 @@
 import React from 'react';
-import { getTranslations } from 'next-intl/server';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { MarketBanner } from '../../components/Market/MarketBanner';
 import { MarketStats } from '../../components/Market/MarketStats';
 import { TopRunesTable } from '../../components/Market/TopRunesTable';
 import { BitcoinCandleChart } from '../../components/BitcoinCandleChart';
 
-export default async function MarketOverviewPage() {
-  const t = await getTranslations('Market');
-
+export default function MarketOverviewPage() {
   return (
     <DashboardLayout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>

@@ -134,3 +134,21 @@
     font-size: 0.75rem;
     color: var(--text-muted);
 }
+a.txItem {
+    text-decoration: none;
+    color: inherit;
+}
+
+.amountPositive {
+    color: var(--status-success);
+}
+
+.amountNegative {
+    color: var(--status-danger);
+}
+
+.emptyState {
+    padding: 1rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}

@@ -2,77 +2,61 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { History, ArrowRightLeft, Plus, Send, Zap, Loader2 } from 'lucide-react';
+import { History, ArrowDownLeft, ArrowUpRight, Gem, Loader2 } from 'lucide-react';
 import styles from './TransactionsList.module.css';
-import { getAddressHistory } from '../lib/unisatApi';
+import { getAddressTransactions, type AddressTransaction } from '../lib/mempoolApi';
+import { Link } from '@/i18n/routing';
 import { useWallet } from './WalletContext';
 
-interface Transaction {
-    id: string;
-    type: string;
-    asset: string;
-    amount: number | string;
-    txid: string;
-    timestamp: string;
-    status: string;
+interface TransactionsListProps {
+    limit?: number;
+    showViewAll?: boolean;
 }
 
-export const TransactionsList: React.FC = () => {
-    const t = useTranslations('Dashboard');
+const formatBtc = (sats: number) =>
+    (sats / 100_000_000).toLocaleString(undefined, { maximumFractionDigits: 8 });
+
+export const TransactionsList: React.FC<TransactionsListProps> = ({ limit = 5, showViewAll = true }) => {
+    const t = useTranslations('Transactions');
     const { address, isConnected } = useWallet();
-    const [txList, setTxList] = useState<Transaction[]>([]);
+    const [txList, setTxList] = useState<AddressTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
-        async function fetchHistory() {
-            if (!isConnected || !address) {
-                setTxList([]);
-                return;
-            }
-            setIsLoading(true);
-            const apiData = await getAddressHistory(address);
+        if (!isConnected || !address) return;
 
-            if (apiData && apiData.detail && apiData.detail.length > 0) {
-                // UniSat /history returns plain BTC transactions: { txid, timestamp, confirmations, ... }.
-                // It carries no per-address amount or rune, so only the tx itself is shown.
-                const mappedTx = apiData.detail.map((item: any) => ({
-                    id: item.txid,
-                    type: 'Transfer',
-                    asset: `${item.txid.substring(0, 6)}...${item.txid.substring(item.txid.length - 4)}`,
-                    amount: '',
-                    txid: item.txid,
-                    timestamp: item.timestamp ? new Date(item.timestamp * 1000).toLocaleDateString() : '—',
-                    status: item.confirmations > 0 ? 'Confirmed' : 'Pending'
-                }));
-                setTxList(mappedTx.slice(0, 5)); // Keep latest 5
-            } else {
-                setTxList([]);
-            }
+        let cancelled = false;
+        async function fetchHistory() {
+            setIsLoading(true);
+            setHasError(false);
+            const data = await getAddressTransactions(address, limit);
+            if (cancelled) return;
+            setTxList(data ?? []);
+            setHasError(data === null);
             setIsLoading(false);
         }
 
         fetchHistory();
-    }, [address, isConnected]);
+        return () => { cancelled = true; };
+    }, [address, isConnected, limit]);
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'Mint': return <Plus size={18} className={styles.iconMint} />;
-            case 'Transfer': return <Send size={18} className={styles.iconTransfer} />;
-            case 'Trade': return <ArrowRightLeft size={18} className={styles.iconTrade} />;
-            case 'Etch': return <Zap size={18} className={styles.iconEtch} />;
-            default: return <History size={18} />;
-        }
+    const getIcon = (tx: AddressTransaction) => {
+        if (tx.hasRunestone) return <Gem size={18} />;
+        return tx.netSats >= 0 ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />;
     };
 
-    const getIconWrapperClass = (type: string) => {
-        switch (type) {
-            case 'Mint': return styles.iconMint;
-            case 'Transfer': return styles.iconTransfer;
-            case 'Trade': return styles.iconTrade;
-            case 'Etch': return styles.iconEtch;
-            default: return '';
-        }
+    const getIconWrapperClass = (tx: AddressTransaction) => {
+        if (tx.hasRunestone) return styles.iconEtch;
+        return tx.netSats >= 0 ? styles.iconMint : styles.iconTransfer;
     };
+
+    const getLabel = (tx: AddressTransaction) => {
+        if (tx.hasRunestone) return t('type_runes');
+        return tx.netSats >= 0 ? t('type_received') : t('type_sent');
+    };
+
+    const visibleTx = isConnected ? txList : [];
 
     return (
         <div className={styles.txCard}>
@@ -80,44 +64,46 @@ export const TransactionsList: React.FC = () => {
                 <div className={styles.title}>
                     <History size={20} className="text-accent" />
                     <span>{t('recent_activity')}</span>
+                    {isLoading && <Loader2 size={16} className="text-muted animate-spin" />}
                 </div>
-                <a href="#" className={styles.viewAll}>{t('view_all')}</a>
+                {showViewAll && <Link href="/history" className={styles.viewAll}>{t('view_all')}</Link>}
             </div>
 
             <div className={styles.txList}>
-                {txList.map((tx, i) => (
-                    <div
-                        key={tx.id}
+                {visibleTx.map((tx, i) => (
+                    <a
+                        key={tx.txid}
+                        href={`https://mempool.space/tx/${encodeURIComponent(tx.txid)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={`${styles.txItem} animate-fade-in`}
-                        style={{ animationDelay: `${i * 0.15}s` }}
+                        style={{ animationDelay: `${i * 0.05}s` }}
+                        title={tx.txid}
                     >
                         <div className={styles.txInfo}>
-                            <div className={`${styles.txIconWrapper} ${getIconWrapperClass(tx.type)}`}>
-                                {getIcon(tx.type)}
+                            <div className={`${styles.txIconWrapper} ${getIconWrapperClass(tx)}`}>
+                                {getIcon(tx)}
                             </div>
                             <div className={styles.txDetails}>
-                                <span className={styles.txType}>{tx.type}</span>
-                                <span className={styles.txTime}>{tx.timestamp}</span>
+                                <span className={styles.txType}>{getLabel(tx)}</span>
+                                <span className={styles.txTime}>
+                                    {tx.blockTime ? new Date(tx.blockTime * 1000).toLocaleDateString() : t('pending')}
+                                </span>
                             </div>
                         </div>
 
                         <div className={styles.txAmount}>
-                            <span className={styles.amount}>
-                                {tx.amount !== '' ? `${typeof tx.amount === 'number' && tx.amount > 0 ? '+' : ''}${tx.amount}` : tx.status}
+                            <span className={`${styles.amount} ${tx.netSats > 0 ? styles.amountPositive : tx.netSats < 0 ? styles.amountNegative : ''}`}>
+                                {tx.netSats > 0 ? '+' : ''}{formatBtc(tx.netSats)} BTC
                             </span>
-                            <a
-                                href={`https://mempool.space/tx/${encodeURIComponent(tx.txid)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={styles.asset}
-                            >
-                                {tx.asset.length > 13 ? tx.asset.substring(0, 13) + '...' : tx.asset}
-                            </a>
+                            <span className={styles.asset}>
+                                {`${tx.txid.substring(0, 6)}...${tx.txid.substring(tx.txid.length - 4)}`}
+                            </span>
                         </div>
-                    </div>
+                    </a>
                 ))}
-                {!isLoading && txList.length === 0 && (
-                    <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No transactions found for this address.</p>
+                {isConnected && !isLoading && visibleTx.length === 0 && (
+                    <p className={styles.emptyState}>{hasError ? t('load_error') : t('no_history')}</p>
                 )}
             </div>
         </div>
