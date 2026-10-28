@@ -7,15 +7,17 @@ import styles from './RunesTable.module.css';
 import { getRunesBalanceList } from '../lib/unisatApi';
 import { useWallet } from './WalletContext';
 import { Skeleton } from './Skeleton';
+import { formatRuneAmount, toRuneAmount } from '../lib/runes';
 
 export interface RuneToken {
     id: string;
     name: string;
     ticker: string;
-    balance: number | string;
+    balance: number;
+    divisibility: number;
     valueUsd: number;
     priceUsd: number;
-    change24h: number;
+    change24h: number | null;
 }
 
 export const RunesTable: React.FC = () => {
@@ -39,11 +41,12 @@ export const RunesTable: React.FC = () => {
                 let mappedRunes = apiData.detail.map((item: any, index: number) => ({
                     id: item.runeid || String(index),
                     name: item.spacedRune || item.rune,
-                    ticker: item.rune.substring(0, 4), // Fallback if symbol not provided
-                    balance: parseFloat(item.amount),
+                    ticker: item.symbol || item.rune.substring(0, 4),
+                    balance: toRuneAmount(item.amount, item.divisibility),
+                    divisibility: item.divisibility ?? 0,
                     valueUsd: 0,
                     priceUsd: 0,
-                    change24h: (Math.random() * 10 - 5), // Mock 24h change
+                    change24h: null, // No 24h price history source yet
                 }));
 
                 // Fetch live prices for the tickers from CoinGecko API
@@ -138,7 +141,7 @@ export const RunesTable: React.FC = () => {
                                 <td className={styles.td}>
                                     <div className={styles.assetCell}>
                                         <div className={styles.assetIcon}>
-                                            {rune.ticker.charAt(0)}
+                                            {Array.from(rune.ticker)[0]}
                                         </div>
                                         <div className={styles.assetName}>
                                             <span className={styles.name}>{rune.name}</span>
@@ -146,14 +149,16 @@ export const RunesTable: React.FC = () => {
                                         </div>
                                     </div>
                                 </td>
-                                <td className={styles.td}>{typeof rune.balance === 'number' ? rune.balance.toLocaleString() : rune.balance}</td>
+                                <td className={styles.td}>{formatRuneAmount(rune.balance, rune.divisibility)}</td>
                                 <td className={styles.td}>${rune.priceUsd.toFixed(4)}</td>
                                 <td className={styles.td}>
                                     <div className={styles.valueCell}>
-                                        <span className={styles.name}>${rune.valueUsd.toLocaleString()}</span>
-                                        <span className={rune.change24h >= 0 ? styles.changePositive : styles.changeNegative}>
-                                            {rune.change24h >= 0 ? '+' : ''}{rune.change24h.toFixed(2)}%
-                                        </span>
+                                        <span className={styles.name}>${rune.valueUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        {rune.change24h !== null && (
+                                            <span className={rune.change24h >= 0 ? styles.changePositive : styles.changeNegative}>
+                                                {rune.change24h >= 0 ? '+' : ''}{rune.change24h.toFixed(2)}%
+                                            </span>
+                                        )}
                                     </div>
                                 </td>
                             </tr>
@@ -164,7 +169,7 @@ export const RunesTable: React.FC = () => {
                 {filteredRunes.length === 0 && !isLoading && (
                     <div className="flex-col items-center justify-center gap-sm" style={{ padding: '3rem', color: 'var(--text-muted)' }}>
                         <Database size={48} opacity={0.2} />
-                        <p>No Runes found matching "{searchTerm}"</p>
+                        <p>{searchTerm ? `No Runes found matching "${searchTerm}"` : 'No Runes found for this address.'}</p>
                     </div>
                 )}
             </div>

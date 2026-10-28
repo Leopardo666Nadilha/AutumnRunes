@@ -32,16 +32,17 @@ export const TransactionsList: React.FC = () => {
             setIsLoading(true);
             const apiData = await getAddressHistory(address);
 
-            if (apiData && apiData.list && apiData.list.length > 0) {
-                // Map from UniSat API
-                const mappedTx = apiData.list.map((item: any) => ({
+            if (apiData && apiData.detail && apiData.detail.length > 0) {
+                // UniSat /history returns plain BTC transactions: { txid, timestamp, confirmations, ... }.
+                // It carries no per-address amount or rune, so only the tx itself is shown.
+                const mappedTx = apiData.detail.map((item: any) => ({
                     id: item.txid,
-                    type: item.type || 'Transfer', // UniSat event type mapped to UI
-                    asset: item.rune || 'RUNE',
-                    amount: item.amount || 0,
+                    type: 'Transfer',
+                    asset: `${item.txid.substring(0, 6)}...${item.txid.substring(item.txid.length - 4)}`,
+                    amount: '',
                     txid: item.txid,
-                    timestamp: new Date(item.blockTime * 1000).toLocaleDateString(),
-                    status: 'Confirmed'
+                    timestamp: item.timestamp ? new Date(item.timestamp * 1000).toLocaleDateString() : '—',
+                    status: item.confirmations > 0 ? 'Confirmed' : 'Pending'
                 }));
                 setTxList(mappedTx.slice(0, 5)); // Keep latest 5
             } else {
@@ -102,12 +103,22 @@ export const TransactionsList: React.FC = () => {
 
                         <div className={styles.txAmount}>
                             <span className={styles.amount}>
-                                {typeof tx.amount === 'number' && tx.amount > 0 ? '+' : ''}{tx.amount}
+                                {tx.amount !== '' ? `${typeof tx.amount === 'number' && tx.amount > 0 ? '+' : ''}${tx.amount}` : tx.status}
                             </span>
-                            <span className={styles.asset}>{tx.asset.length > 12 ? tx.asset.substring(0, 12) + '...' : tx.asset}</span>
+                            <a
+                                href={`https://mempool.space/tx/${encodeURIComponent(tx.txid)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.asset}
+                            >
+                                {tx.asset.length > 13 ? tx.asset.substring(0, 13) + '...' : tx.asset}
+                            </a>
                         </div>
                     </div>
                 ))}
+                {!isLoading && txList.length === 0 && (
+                    <p style={{ padding: '1rem', color: 'var(--text-muted)' }}>No transactions found for this address.</p>
+                )}
             </div>
         </div>
     );

@@ -6,6 +6,7 @@ import { Eye, Plus, ArrowUpRight, Loader2, Copy, CheckCircle2, LogOut } from 'lu
 import styles from './WalletCard.module.css';
 import { getAddressBalance } from '../lib/unisatApi';
 import { getBitcoinMarketData } from '../lib/marketApi';
+import { toRuneAmount } from '../lib/runes';
 import { useWallet } from './WalletContext';
 import { Skeleton } from './Skeleton';
 
@@ -69,7 +70,7 @@ export const WalletCard: React.FC = () => {
                 let totalRunesUsd = 0;
                 for (const rune of runesData.detail) {
                     const name = rune.spacedRune || rune.rune;
-                    const amount = parseFloat(rune.amount) || 0;
+                    const amount = toRuneAmount(rune.amount, rune.divisibility);
                     const price = pricesMap[name] || 0;
                     totalRunesUsd += amount * price;
                 }
@@ -120,7 +121,7 @@ export const WalletCard: React.FC = () => {
                 <div className={styles.splitItem}>
                     <span className={styles.splitLabel}>{t('bitcoin')}</span>
                     <span className={styles.splitValue}>
-                        {isLoading ? <Skeleton width="100px" height="1.5rem" /> : `${btcBalance} BTC`}
+                        {isLoading ? <Skeleton width="100px" height="1.5rem" /> : `${(btcBalance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 8 })} BTC`}
                     </span>
                 </div>
                 <div className={styles.splitItem}>

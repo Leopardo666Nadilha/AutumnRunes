@@ -34,7 +34,7 @@ export async function getAddressBalance(address: string) {
 export async function getRunesBalanceList(address: string) {
     if (!isValidBitcoinAddress(address)) return null;
     try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/runes/balance-list`, {
+        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/runes/balance-list?start=0&limit=500`, { // default page size is only 10
             headers: getHeaders(),
             next: { revalidate: 60 },
         });

@@ -6,6 +6,7 @@ import { Database, Loader2 } from 'lucide-react';
 import styles from './AssetGrid.module.css';
 import { getRunesBalanceList } from '../../lib/unisatApi';
 import { useWallet } from '../WalletContext';
+import { formatRuneAmount, toRuneAmount } from '../../lib/runes';
 
 interface RuneToken {
     id: string;
@@ -36,8 +37,8 @@ export const AssetGrid: React.FC = () => {
                 const mappedRunes = apiData.detail.map((item: any, index: number) => ({
                     id: item.runeid || String(index),
                     name: item.spacedRune || item.rune,
-                    ticker: item.rune.substring(0, 4),
-                    balance: item.amount,
+                    ticker: item.symbol || item.rune.substring(0, 4),
+                    balance: formatRuneAmount(toRuneAmount(item.amount, item.divisibility), item.divisibility),
                     valueUsd: 0,
                     priceUsd: 0,
                     change24h: 0,
@@ -78,7 +79,7 @@ export const AssetGrid: React.FC = () => {
                     style={{ animationDelay: `${i * 0.1}s` }}
                 >
                     <div className={styles.cardHeader}>
-                        <div className={styles.icon}>{rune.ticker.charAt(0)}</div>
+                        <div className={styles.icon}>{Array.from(rune.ticker)[0]}</div>
                         <div className={styles.nameInfo}>
                             <span className={styles.ticker}>{rune.ticker}</span>
                             <span className={styles.name}>{rune.name}</span>
