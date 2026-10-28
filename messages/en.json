@@ -1,6 +1,7 @@
 {
     "Dashboard": {
         "brand": "Autumn Runes",
+        "language": "Language",
         "nav_portfolio": "My Portfolio",
         "nav_about": "About Runes",
         "nav_marketplace": "Marketplace",

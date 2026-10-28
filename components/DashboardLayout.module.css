@@ -118,22 +118,49 @@
     border-bottom: 1px solid var(--border-light);
 }
 
+.headerActions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* Same pill shape and height as the locale switcher next to it */
 .walletBadge {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    height: 40px;
+    padding: 0 1rem;
     background: var(--bg-tertiary);
-    padding: 0.5rem 1rem;
     border-radius: 9999px;
     border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
     font-weight: 500;
+    text-decoration: none;
     cursor: pointer;
+    outline: none;
     transition: all var(--transition-fast);
 }
 
 .walletBadge:hover {
+    color: var(--text-primary);
     border-color: var(--accent-primary);
     box-shadow: 0 0 15px rgba(247, 147, 26, 0.2);
+}
+
+.walletBadge:focus-visible {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.walletBadgeEmpty {
+    border-style: dashed;
+}
+
+.walletIcon {
+    color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 .networkDot {

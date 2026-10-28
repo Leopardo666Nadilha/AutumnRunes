@@ -18,17 +18,17 @@ const WalletBadge = () => {
 
     if (!isConnected) {
         return (
-            <Link href="/portfolio" className={styles.walletBadge} style={{ border: '1px dashed var(--border-light)', textDecoration: 'none' }}>
-                <Wallet size={16} className="text-muted" />
-                <span className="text-secondary" style={{ fontSize: '0.875rem' }}>{t('not_connected')}</span>
+            <Link href="/portfolio" className={`${styles.walletBadge} ${styles.walletBadgeEmpty}`}>
+                <Wallet size={16} className={styles.walletIcon} />
+                <span>{t('not_connected')}</span>
             </Link>
         );
     }
 
     return (
-        <Link href="/portfolio" className={styles.walletBadge} title={t('go_to_portfolio')} style={{ textDecoration: 'none' }}>
+        <Link href="/portfolio" className={styles.walletBadge} title={t('go_to_portfolio')}>
             <div className={styles.networkDot}></div>
-            <span className="text-secondary">{shortenedAddress}</span>
+            <span>{shortenedAddress}</span>
         </Link>
     );
 };
@@ -83,7 +83,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                         <p className="text-body">{t('header_subtitle')}</p>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div className={styles.headerActions}>
                         <LocaleSwitcher />
                         <WalletBadge />
                     </div>
