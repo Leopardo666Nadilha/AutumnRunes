@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, Wallet, ArrowRight } from 'lucide-react';
 import { useWallet } from './WalletContext';
+import { isValidBitcoinAddress } from '../lib/validation';
 import styles from './AddressInput.module.css';
 
 export const AddressInput: React.FC = () => {
@@ -21,8 +22,7 @@ export const AddressInput: React.FC = () => {
             return;
         }
 
-        // Basic bitcoin address validation (starts with 1, 3, or bc1)
-        if (!/^(bc1|[13])[a-zA-HJ-NP-Z0-9]+/.test(trimmed)) {
+        if (!isValidBitcoinAddress(trimmed)) {
             setError(t('wallet_input_invalid'));
             return;
         }

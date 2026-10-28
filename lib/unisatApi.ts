@@ -1,5 +1,7 @@
 'use server';
 
+import { clampInt, isValidBitcoinAddress } from './validation';
+
 const UNISAT_BASE_URL = 'https://open-api.unisat.io';
 
 const getHeaders = () => ({
@@ -11,8 +13,9 @@ const getHeaders = () => ({
  * Fetches the user's BTC/Satoshi balance and UTXO count.
  */
 export async function getAddressBalance(address: string) {
+    if (!isValidBitcoinAddress(address)) return null;
     try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${address}/balance`, {
+        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/balance`, {
             headers: getHeaders(),
             next: { revalidate: 30 },
         });
@@ -29,8 +32,9 @@ export async function getAddressBalance(address: string) {
  * Fetches the list of Runes held by the address.
  */
 export async function getRunesBalanceList(address: string) {
+    if (!isValidBitcoinAddress(address)) return null;
     try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${address}/runes/balance-list`, {
+        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/runes/balance-list`, {
             headers: getHeaders(),
             next: { revalidate: 60 },
         });
@@ -47,8 +51,9 @@ export async function getRunesBalanceList(address: string) {
  * Fetches recent history for an address.
  */
 export async function getAddressHistory(address: string) {
+    if (!isValidBitcoinAddress(address)) return null;
     try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${address}/history`, {
+        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/address/${encodeURIComponent(address)}/history`, {
             headers: getHeaders(),
             next: { revalidate: 60 },
         });
@@ -67,8 +72,10 @@ export async function getAddressHistory(address: string) {
  * Response shape: { data: { detail: [...], total: number, height: number } }
  */
 export async function getRunesInfoList(start = 0, limit = 10) {
+    const safeStart = clampInt(start, 0, 100_000, 0);
+    const safeLimit = clampInt(limit, 1, 100, 10);
     try {
-        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/runes/info-list?start=${start}&limit=${limit}`, {
+        const res = await fetch(`${UNISAT_BASE_URL}/v1/indexer/runes/info-list?start=${safeStart}&limit=${safeLimit}`, {
             headers: getHeaders(),
             next: { revalidate: 60 },
         });

@@ -1,6 +1,12 @@
 'use server';
 
+import { clampInt } from './validation';
+
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+
+// Limits for getRunesPrices: each ticker costs ~1-2 upstream requests plus an 800ms delay
+const MAX_TICKERS = 25;
+const MAX_TICKER_LENGTH = 64;
 
 export async function getBitcoinMarketData() {
     try {
@@ -17,6 +23,7 @@ export async function getBitcoinMarketData() {
 }
 
 export async function getBitcoinOHLC(days: number = 7): Promise<number[][] | null> {
+    days = clampInt(days, 1, 365, 7);
     try {
         let interval = '1d';
         let limit = 100;
@@ -84,7 +91,10 @@ export async function getDogTokenMarketData() {
  */
 export async function getRunesPrices(tickers: string[]): Promise<Record<string, number>> {
     const prices: Record<string, number> = {};
-    const uniqueTickers = Array.from(new Set(tickers));
+    if (!Array.isArray(tickers)) return prices;
+    const uniqueTickers = Array.from(new Set(
+        tickers.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= MAX_TICKER_LENGTH)
+    )).slice(0, MAX_TICKERS);
 
     // Hardcode known top runes/NFTs that might fail the search or be indexed differently
     const KNOWN_RUNES: Record<string, string> = {
@@ -98,10 +108,12 @@ export async function getRunesPrices(tickers: string[]): Promise<Record<string, 
     };
 
     for (const ticker of uniqueTickers) {
-        if (prices[ticker]) continue;
+        if (Object.hasOwn(prices, ticker)) continue;
 
         try {
-            let coinId = KNOWN_RUNES[ticker] || KNOWN_RUNES[ticker.toUpperCase()];
+            let coinId = Object.hasOwn(KNOWN_RUNES, ticker) ? KNOWN_RUNES[ticker]
+                : Object.hasOwn(KNOWN_RUNES, ticker.toUpperCase()) ? KNOWN_RUNES[ticker.toUpperCase()]
+                : undefined;
 
             // If not a known rune, try to search for it
             if (!coinId) {
@@ -113,7 +125,7 @@ export async function getRunesPrices(tickers: string[]): Promise<Record<string, 
                         c.name.toLowerCase() === ticker.toLowerCase() ||
                         c.id.toLowerCase().includes(ticker.toLowerCase().replace(/•/g, '-'))
                     );
-                    if (coin && coin.id) {
+                    if (coin && typeof coin.id === 'string') {
                         coinId = coin.id;
                     }
                 }
@@ -123,7 +135,7 @@ export async function getRunesPrices(tickers: string[]): Promise<Record<string, 
                 if (coinId.startsWith('nft:')) {
                     // Fetch NFT floor price
                     const nftId = coinId.replace('nft:', '');
-                    const priceRes = await fetch(`${COINGECKO_BASE_URL}/nfts/${nftId}`);
+                    const priceRes = await fetch(`${COINGECKO_BASE_URL}/nfts/${encodeURIComponent(nftId)}`);
                     if (priceRes.ok) {
                         const priceData = await priceRes.json();
                         prices[ticker] = priceData.floor_price?.usd || 0;
@@ -132,7 +144,7 @@ export async function getRunesPrices(tickers: string[]): Promise<Record<string, 
                     }
                 } else {
                     // Fetch Coin USD price
-                    const priceRes = await fetch(`${COINGECKO_BASE_URL}/simple/price?ids=${coinId}&vs_currencies=usd`);
+                    const priceRes = await fetch(`${COINGECKO_BASE_URL}/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd`);
                     if (priceRes.ok) {
                         const priceData = await priceRes.json();
                         prices[ticker] = priceData[coinId]?.usd || 0;

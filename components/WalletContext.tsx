@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { isValidBitcoinAddress } from '../lib/validation';
 
 interface WalletContextType {
     address: string;
@@ -18,8 +19,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Load from localStorage on mount
     useEffect(() => {
         const savedAddress = localStorage.getItem('unisat_dashboard_address');
-        if (savedAddress) {
+        if (isValidBitcoinAddress(savedAddress)) {
             setAddressState(savedAddress);
+        } else if (savedAddress) {
+            localStorage.removeItem('unisat_dashboard_address');
         }
     }, []);
 
