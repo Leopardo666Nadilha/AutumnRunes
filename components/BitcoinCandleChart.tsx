@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createChart, CandlestickData, IChartApi, ISeriesApi, Time, CrosshairMode, CandlestickSeries } from 'lightweight-charts';
+import { createChart, CandlestickData, IChartApi, ISeriesApi, LogicalRange, Time, CrosshairMode, CandlestickSeries } from 'lightweight-charts';
 import { Activity, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import styles from './BitcoinCandleChart.module.css';
@@ -28,6 +28,18 @@ interface OHLCValues {
     close: number;
 }
 
+// Start fetching older candles once fewer than this many bars are left before the first one
+const LOAD_MORE_THRESHOLD = 50;
+
+const toCandles = (raw: number[][]): CandlestickData<Time>[] =>
+    raw.map((item) => ({
+        time: (Math.floor(item[0] / 1000)) as Time,
+        open: item[1],
+        high: item[2],
+        low: item[3],
+        close: item[4],
+    }));
+
 export const BitcoinCandleChart: React.FC = () => {
     const t = useTranslations('Chart');
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -39,7 +51,56 @@ export const BitcoinCandleChart: React.FC = () => {
     const [btcPrice, setBtcPrice] = useState<number | null>(null);
     const [btcChange, setBtcChange] = useState<number | null>(null);
     const [hoveredOHLC, setHoveredOHLC] = useState<OHLCValues | null>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const requestIdRef = useRef(0);
+    const selectedIntervalRef = useRef(selectedInterval);
+    const candlesRef = useRef<CandlestickData<Time>[]>([]);
+    const hasMoreRef = useRef(true);
+    const isLoadingMoreRef = useRef(false);
+
+    // Prepend pages of candles that end right before the oldest one loaded
+    const loadOlder = useCallback(async () => {
+        const series = seriesInstanceRef.current;
+        const chart = chartInstanceRef.current;
+        if (!series || !chart || !hasMoreRef.current || isLoadingMoreRef.current) return;
+
+        const requestId = requestIdRef.current;
+        isLoadingMoreRef.current = true;
+        setIsLoadingMore(true);
+
+        try {
+            // Zoomed out further than one page covers: keep loading until the view is filled
+            while (hasMoreRef.current) {
+                const first = candlesRef.current[0];
+                if (!first) break;
+
+                const raw = await getBitcoinOHLC(selectedIntervalRef.current, (first.time as number) * 1000 - 1);
+                // The interval changed while this page was loading, so it belongs to another series
+                if (requestId !== requestIdRef.current || !raw) break;
+
+                const older = toCandles(raw).filter((c) => (c.time as number) < (first.time as number));
+                if (older.length === 0) {
+                    // Reached the start of the exchange's history: stop scrolling past the first candle
+                    hasMoreRef.current = false;
+                    chart.timeScale().applyOptions({ fixLeftEdge: true });
+                    break;
+                }
+
+                candlesRef.current = [...older, ...candlesRef.current];
+                series.setData(candlesRef.current);
+
+                const range = chart.timeScale().getVisibleLogicalRange();
+                if (!range || range.from >= LOAD_MORE_THRESHOLD) break;
+            }
+        } catch (err) {
+            console.error('[BitcoinCandleChart] loadOlder error:', err);
+        } finally {
+            if (requestId === requestIdRef.current) {
+                isLoadingMoreRef.current = false;
+                setIsLoadingMore(false);
+            }
+        }
+    }, []);
 
     // Initialize chart once the container is available (effects only run on the client)
     useEffect(() => {
@@ -131,19 +192,30 @@ export const BitcoinCandleChart: React.FC = () => {
             for (const entry of entries) {
                 const { width, height } = entry.contentRect;
                 if (width > 0 && height > 0) {
+                    // Resizing keeps bar spacing, which would widen the visible period;
+                    // keep the same time window instead (also covers the first layout)
+                    const visible = chart.timeScale().getVisibleRange();
                     chart.resize(width, height);
+                    if (visible) chart.timeScale().setVisibleRange(visible);
                 }
             }
         });
         ro.observe(container);
 
+        // Load older history when the user scrolls back or zooms out near the first candle
+        const onVisibleRangeChange = (range: LogicalRange | null) => {
+            if (range && range.from < LOAD_MORE_THRESHOLD) loadOlder();
+        };
+        chart.timeScale().subscribeVisibleLogicalRangeChange(onVisibleRangeChange);
+
         return () => {
+            chart.timeScale().unsubscribeVisibleLogicalRangeChange(onVisibleRangeChange);
             ro.disconnect();
             chart.remove();
             chartInstanceRef.current = null;
             seriesInstanceRef.current = null;
         };
-    }, []);
+    }, [loadOlder]);
 
     // Fetch market data (price/change)
     useEffect(() => {
@@ -160,19 +232,26 @@ export const BitcoinCandleChart: React.FC = () => {
     const fetchOHLC = useCallback(async (days: number) => {
         // Ignore responses from intervals the user already switched away from
         const requestId = ++requestIdRef.current;
+        selectedIntervalRef.current = days;
+        candlesRef.current = [];
+        hasMoreRef.current = true;
+        isLoadingMoreRef.current = false;
+        chartInstanceRef.current?.timeScale().applyOptions({ fixLeftEdge: false });
         try {
             const raw = await getBitcoinOHLC(days);
             if (requestId !== requestIdRef.current) return;
-            if (raw && raw.length > 0 && seriesInstanceRef.current && chartInstanceRef.current) {
-                const candles: CandlestickData<Time>[] = raw.map((item: number[]) => ({
-                    time: (Math.floor(item[0] / 1000)) as Time,
-                    open: item[1],
-                    high: item[2],
-                    low: item[3],
-                    close: item[4],
-                }));
+            const chart = chartInstanceRef.current;
+            if (raw && raw.length > 0 && seriesInstanceRef.current && chart) {
+                const candles = toCandles(raw);
+                candlesRef.current = candles;
                 seriesInstanceRef.current.setData(candles);
-                chartInstanceRef.current.timeScale().fitContent();
+                // The page holds more history than the selected range; show only that range
+                // and leave the rest for zooming out or scrolling back
+                const last = candles[candles.length - 1].time as number;
+                chart.timeScale().setVisibleRange({
+                    from: (last - days * 86400) as Time,
+                    to: last as Time,
+                });
             }
         } catch (err) {
             console.error('[BitcoinCandleChart] fetchOHLC error:', err);
@@ -188,6 +267,7 @@ export const BitcoinCandleChart: React.FC = () => {
     const handleIntervalChange = (days: number) => {
         if (days === selectedInterval) return;
         setIsLoading(true);
+        setIsLoadingMore(false);
         setHoveredOHLC(null);
         setSelectedInterval(days);
     };
@@ -251,6 +331,12 @@ export const BitcoinCandleChart: React.FC = () => {
                 {isLoading && (
                     <div className={styles.loadingOverlay}>
                         <Loader2 size={32} className={styles.spinner} />
+                    </div>
+                )}
+                {isLoadingMore && (
+                    <div className={styles.loadingMore}>
+                        <Loader2 size={14} className={styles.spinner} />
+                        <span>{t('loading_history')}</span>
                     </div>
                 )}
                 <div ref={chartContainerRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />

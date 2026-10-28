@@ -77,7 +77,8 @@
     },
     "Chart": {
         "title": "Visão Geral do Bitcoin",
-        "hover_hint": "Passe o mouse sobre as velas para ver dados OHLC"
+        "hover_hint": "Passe o mouse sobre as velas para ver dados OHLC",
+        "loading_history": "Carregando histórico..."
     },
     "Transactions": {
         "recent_activity": "Atividade Recente",

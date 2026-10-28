@@ -77,7 +77,8 @@
     },
     "Chart": {
         "title": "Bitcoin Overview",
-        "hover_hint": "Hover over candles to see OHLC data"
+        "hover_hint": "Hover over candles to see OHLC data",
+        "loading_history": "Loading history..."
     },
     "Transactions": {
         "recent_activity": "Recent Activity",

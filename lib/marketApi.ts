@@ -22,41 +22,44 @@ export async function getBitcoinMarketData() {
     }
 }
 
-export async function getBitcoinOHLC(days: number = 7): Promise<number[][] | null> {
-    days = clampInt(days, 1, 365, 7);
+// Candle size used for each chart range button (days -> Binance interval)
+const OHLC_INTERVALS: Record<number, string> = {
+    1: '15m',
+    7: '1h',
+    30: '4h',
+    90: '1d',
+    180: '1d',
+    365: '1d',
+};
+
+// Binance's maximum page size; one page covers the selected range with room to zoom out
+const OHLC_PAGE_SIZE = 1000;
+// Bitcoin's first exchange prices are from 2010, so nothing older can exist
+const MIN_OHLC_END_TIME = Date.UTC(2010, 0, 1);
+
+/**
+ * Returns up to 1000 candles as [timestampMs, open, high, low, close], oldest first.
+ * Without endTime it returns the latest candles; with endTime (ms) it returns the
+ * page ending right before it, so the chart can keep loading older history.
+ */
+export async function getBitcoinOHLC(days: number = 7, endTime?: number): Promise<number[][] | null> {
+    const interval = OHLC_INTERVALS[days] ?? '1d';
+    const params = new URLSearchParams({ symbol: 'BTCUSDT', interval, limit: String(OHLC_PAGE_SIZE) });
+
+    if (endTime !== undefined) {
+        if (!Number.isFinite(endTime)) return null;
+        params.set('endTime', String(clampInt(endTime, MIN_OHLC_END_TIME, Date.now(), Date.now())));
+    }
+
     try {
-        let interval = '1d';
-        let limit = 100;
-
-        if (days === 1) {
-            interval = '15m';
-            limit = 96;
-        } else if (days === 7) {
-            interval = '1h';
-            limit = 168;
-        } else if (days === 30) {
-            interval = '4h';
-            limit = 180;
-        } else if (days === 90) {
-            interval = '1d';
-            limit = 90;
-        } else if (days === 180) {
-            interval = '1d';
-            limit = 180;
-        } else if (days === 365) {
-            interval = '1d';
-            limit = 365;
-        }
-
-        const res = await fetch(
-            `https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=${limit}`,
-            { next: { revalidate: 120 } }
-        );
+        const res = await fetch(`https://api.binance.us/api/v3/klines?${params}`, {
+            // Older pages never change; only the latest one needs to refresh
+            next: { revalidate: endTime === undefined ? 120 : 86400 },
+        });
         if (!res.ok) return null;
         const data = await res.json();
 
         // Binance returns: [ [ Open time, Open, High, Low, Close, Volume, Close time, ... ], ... ]
-        // Map to: [[timestamp, open, high, low, close], ...]
         if (!Array.isArray(data)) return null;
         return data.map((candle: (string | number)[]) => [
             Number(candle[0]),
