@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, CandlestickData, IChartApi, ISeriesApi, LogicalRange, Time, CrosshairMode, CandlestickSeries } from 'lightweight-charts';
 import { Activity, Loader2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import styles from './BitcoinCandleChart.module.css';
 import { getBitcoinOHLC, getBitcoinMarketData } from '../lib/marketApi';
 
@@ -42,6 +42,7 @@ const toCandles = (raw: number[][]): CandlestickData<Time>[] =>
 
 export const BitcoinCandleChart: React.FC = () => {
     const t = useTranslations('Chart');
+    const locale = useLocale();
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartInstanceRef = useRef<IChartApi | null>(null);
     const seriesInstanceRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -216,6 +217,11 @@ export const BitcoinCandleChart: React.FC = () => {
             seriesInstanceRef.current = null;
         };
     }, [loadOlder]);
+
+    // Axis dates follow the app language instead of the browser's
+    useEffect(() => {
+        chartInstanceRef.current?.applyOptions({ localization: { locale } });
+    }, [locale]);
 
     // Fetch market data (price/change)
     useEffect(() => {
