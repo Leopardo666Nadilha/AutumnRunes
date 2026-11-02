@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 import styles from '../RunesTable.module.css';
+import explorerStyles from './RuneExplorer.module.css';
 import { getRunesInfoList } from '../../lib/unisatApi';
 
 interface RuneDetail {
@@ -71,15 +73,17 @@ export const TopRunesTable: React.FC = () => {
                                     {i + 1}
                                 </td>
                                 <td className={styles.td}>
-                                    <div className={styles.assetCell}>
-                                        <div className={styles.assetIcon} style={{ background: 'rgba(247,147,26,0.1)', border: '1px solid rgba(247,147,26,0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
-                                            {rune.symbol || (rune.spacedRune ? Array.from(rune.spacedRune)[0] : '✦')}
+                                    <Link href={`/marketplace/${rune.runeid}`} className={explorerStyles.runeLink}>
+                                        <div className={styles.assetCell}>
+                                            <div className={styles.assetIcon} style={{ background: 'rgba(247,147,26,0.1)', border: '1px solid rgba(247,147,26,0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                                                {rune.symbol || (rune.spacedRune ? Array.from(rune.spacedRune)[0] : '✦')}
+                                            </div>
+                                            <div className={styles.assetName}>
+                                                <span className={`${styles.name} ${explorerStyles.runeName}`}>{rune.spacedRune}</span>
+                                                <span className={styles.ticker}>ID: {rune.runeid}</span>
+                                            </div>
                                         </div>
-                                        <div className={styles.assetName}>
-                                            <span className={styles.name}>{rune.spacedRune}</span>
-                                            <span className={styles.ticker}>ID: {rune.runeid}</span>
-                                        </div>
-                                    </div>
+                                    </Link>
                                 </td>
                                 <td className={styles.td}>
                                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-primary)', fontWeight: 600 }}>

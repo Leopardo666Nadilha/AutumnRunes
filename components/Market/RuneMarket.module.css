@@ -1,0 +1,255 @@
+/* Rune detail page */
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: color var(--transition-fast);
+}
+
+.back:hover,
+.back:focus-visible {
+    color: var(--accent-primary);
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-panel);
+}
+
+.identity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.symbol {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(247, 147, 26, 0.1);
+    border: 1px solid rgba(247, 147, 26, 0.3);
+    color: var(--accent-primary);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.identityText {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.runeName {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.verified {
+    color: var(--status-success);
+    flex-shrink: 0;
+}
+
+.meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.priceBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+}
+
+.price {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.priceUnit {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.priceSub {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.noMarket {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.warning {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-lg);
+    color: var(--status-warning);
+    font-size: 0.875rem;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    /* Grid items default to min-width: auto and would grow past their column */
+    min-width: 0;
+    padding: 1rem 1.25rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+}
+
+.statLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.statValue {
+    overflow-wrap: anywhere;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.statSub {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.inlineLink {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-decoration-color: var(--border-light);
+    text-underline-offset: 3px;
+    transition: color var(--transition-fast);
+}
+
+.inlineLink:hover {
+    color: var(--accent-primary);
+}
+
+/* Price chart */
+.chartHeading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.chartSource {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.hint {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.chartCanvas {
+    position: absolute;
+    inset: 0;
+}
+
+.chartMessage {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Recent sales */
+.muted {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.linkCell {
+    width: 2.5rem;
+    text-align: center;
+}
+
+.iconLink {
+    display: inline-flex;
+    padding: 0.35rem;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.iconLink:hover,
+.iconLink:focus-visible {
+    color: var(--accent-primary);
+    background: var(--bg-tertiary);
+}
+
+@media (max-width: 768px) {
+    .priceBlock {
+        align-items: flex-start;
+    }
+
+    .runeName {
+        font-size: 1.25rem;
+    }
+}
