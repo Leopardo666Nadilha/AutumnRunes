@@ -1,6 +1,8 @@
 'use server';
 
 import { clampInt, isValidBitcoinAddress, isValidRuneId, isValidSpacedRune, normalizeRuneQuery } from './validation';
+import { getCoinGeckoRuneChanges } from './marketApi';
+import { salesPriceChange } from './runeSales';
 
 const UNISAT_BASE_URL = 'https://open-api.unisat.io';
 
@@ -97,11 +99,13 @@ export interface RuneInfo {
 export type MarketPeriod = '24h' | '7d' | '30d';
 
 export interface RuneMarketStats {
-    /** Price of one whole rune unit, in sats */
+    /** Price of one whole rune unit (cheapest UniSat listing), in sats */
     curPrice: number;
-    /** Price change over the period as a fraction (0.05 = +5%); 0 when nothing traded */
-    changePercent: number;
-    /** Traded volume over the period, in sats */
+    /** Price change over the period as a fraction (0.05 = +5%), or null when it can't be measured */
+    change: number | null;
+    /** CoinGecko (aggregated across markets) or the rune's own UniSat sales */
+    changeSource: 'coingecko' | 'sales' | null;
+    /** Traded volume on UniSat over the period, in sats */
     btcVolume: number;
     capUSD: number | null;
     warning: boolean;
@@ -147,7 +151,6 @@ interface RawMarketItem {
     symbol?: string;
     holders?: number;
     curPrice?: number;
-    changePercent?: number;
     btcVolume?: number;
     capUSD?: string;
     warning?: boolean;
@@ -159,7 +162,10 @@ function toMarketStats(raw: RawMarketItem): RuneMarketStats | null {
     const capUSD = Number(raw.capUSD);
     return {
         curPrice: raw.curPrice,
-        changePercent: typeof raw.changePercent === 'number' ? raw.changePercent : 0,
+        // UniSat's own changePercent compares the last sale with one from a period ago, so a single
+        // small off-market lot can swing it by tens of percent; withChanges() fills a robust one
+        change: null,
+        changeSource: null,
         btcVolume: typeof raw.btcVolume === 'number' ? raw.btcVolume : 0,
         capUSD: Number.isFinite(capUSD) && capUSD > 0 ? capUSD : null,
         warning: raw.warning === true,
@@ -179,6 +185,41 @@ async function postMarket<T>(path: string, body: unknown, revalidate: number): P
     if (!res.ok) return null;
     const json = await res.json();
     return json?.code === 0 ? (json.data ?? null) : null;
+}
+
+const DAY_MS = 86_400_000;
+const PERIOD_MS: Record<MarketPeriod, number> = { '24h': DAY_MS, '7d': 7 * DAY_MS, '30d': 30 * DAY_MS };
+// Parallel sales requests while computing changes for a page of runes
+const CHANGE_CONCURRENCY = 5;
+
+/**
+ * Fills each rune's price change: CoinGecko's when it tracks the rune, otherwise one computed
+ * from the rune's UniSat sales (only for runes that traded in the period).
+ */
+async function withChanges(items: RuneListItem[], period: MarketPeriod): Promise<RuneListItem[]> {
+    const coinGecko = await getCoinGeckoRuneChanges();
+    const fromSales = new Map<string, number | null>();
+    const needSales = items.filter((item) =>
+        item.market && item.market.btcVolume > 0 && typeof coinGecko[item.runeId]?.[period] !== 'number');
+
+    for (let i = 0; i < needSales.length; i += CHANGE_CONCURRENCY) {
+        const batch = needSales.slice(i, i + CHANGE_CONCURRENCY);
+        const changes = await Promise.all(batch.map((item) =>
+            getRuneSales(item.spacedRune, 0)
+                .then((page) => (page ? salesPriceChange(page.sales, PERIOD_MS[period]) : null))
+                .catch(() => null)));
+        batch.forEach((item, index) => fromSales.set(item.runeId, changes[index]));
+    }
+
+    return items.map((item) => {
+        if (!item.market) return item;
+        const external = coinGecko[item.runeId]?.[period];
+        if (typeof external === 'number') {
+            return { ...item, market: { ...item.market, change: external, changeSource: 'coingecko' as const } };
+        }
+        const own = fromSales.get(item.runeId) ?? null;
+        return { ...item, market: { ...item.market, change: own, changeSource: own === null ? null : 'sales' as const } };
+    });
 }
 
 async function fetchMarketPage(start: number, limit: number, period: unknown) {
@@ -211,7 +252,7 @@ export async function getRunesMarketList(start = 0, limit = 50, period: MarketPe
                 market: toMarketStats(raw),
             }));
         return {
-            items,
+            items: await withChanges(items, period),
             // The endpoint does not report a total; a full page means there may be more
             hasMore: data.list.length === safeLimit,
             btcPrice: typeof data.BTCPrice === 'number' ? data.BTCPrice : null,
@@ -250,19 +291,21 @@ export async function searchRunes(query: string, start = 0, limit = 20, period: 
             if (raw.runeId) marketById.set(raw.runeId, raw);
         }
 
+        const items = detail
+            .filter((rune) => isValidRuneId(rune.runeid))
+            .map((rune) => {
+                const raw = marketById.get(rune.runeid);
+                return {
+                    runeId: rune.runeid,
+                    spacedRune: rune.spacedRune,
+                    symbol: rune.symbol ?? '',
+                    holders: typeof rune.holders === 'number' ? rune.holders : null,
+                    market: raw ? toMarketStats(raw) : null,
+                };
+            });
+
         return {
-            items: detail
-                .filter((rune) => isValidRuneId(rune.runeid))
-                .map((rune) => {
-                    const raw = marketById.get(rune.runeid);
-                    return {
-                        runeId: rune.runeid,
-                        spacedRune: rune.spacedRune,
-                        symbol: rune.symbol ?? '',
-                        holders: typeof rune.holders === 'number' ? rune.holders : null,
-                        market: raw ? toMarketStats(raw) : null,
-                    };
-                }),
+            items: await withChanges(items, period),
             hasMore: safeStart + detail.length < total,
             btcPrice: typeof market?.BTCPrice === 'number' ? market.BTCPrice : null,
         };
@@ -303,7 +346,13 @@ export async function getRuneMarketStats(spacedRune: string): Promise<RuneMarket
             { tick: spacedRune, timeType: 'day1' },
             60,
         );
-        return data ? toMarketStats(data) : null;
+        const stats = data ? toMarketStats(data) : null;
+        if (!stats || !isValidRuneId(data?.runeId)) return stats;
+        const [item] = await withChanges(
+            [{ runeId: data.runeId, spacedRune, symbol: '', holders: null, market: stats }],
+            '24h',
+        );
+        return item.market;
     } catch (error) {
         console.error("getRuneMarketStats error:", error);
         return null;

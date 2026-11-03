@@ -120,6 +120,11 @@
     color: var(--text-muted);
 }
 
+.changeSource {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
 .noMarket {
     font-size: 0.875rem;
     color: var(--text-muted);

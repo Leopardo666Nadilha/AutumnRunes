@@ -79,8 +79,7 @@ export default async function RunePage({ params }: RunePageProps) {
     const hasEtching = info.timestamp > 0 && /^[0-9a-f]{64}$/.test(info.etching) && /[1-9a-f]/.test(info.etching);
     const etchedBlock = t('etched_block', { height: info.height.toLocaleString('en-US') });
 
-    const change = stats?.changePercent ?? 0;
-    // UniSat reports 0% when nothing traded in 24h; say so instead of showing a flat price
+    const change = stats?.change ?? null;
     const traded24h = !!stats && stats.btcVolume > 0;
     const statCards: { label: string; value: string; title?: string; sub?: React.ReactNode }[] = [
         {
@@ -181,12 +180,20 @@ export default async function RunePage({ params }: RunePageProps) {
                                 )}
                                 <span className={styles.priceSub}>
                                     {btcUsd && <span>{formatSats(stats.curPrice)} sats</span>}
-                                    {traded24h ? (
-                                        <span className={change > 0 ? tableStyles.changePositive : change < 0 ? tableStyles.changeNegative : ''}>
-                                            {formatChange(change)} · 24h
+                                    {change !== null ? (
+                                        <span
+                                            className={change > 0 ? tableStyles.changePositive : change < 0 ? tableStyles.changeNegative : ''}
+                                            title={t(stats.changeSource === 'coingecko' ? 'change_source_coingecko' : 'change_source_sales')}
+                                        >
+                                            {formatChange(change)} · 24h{' '}
+                                            <span className={styles.changeSource}>
+                                                ({t(stats.changeSource === 'coingecko' ? 'source_coingecko' : 'source_sales')})
+                                            </span>
                                         </span>
                                     ) : (
-                                        <span className={styles.noTrades}>{t('no_trades', { period: t('period_24h') })}</span>
+                                        <span className={styles.noTrades}>
+                                            {traded24h ? t('change_unavailable') : t('no_trades', { period: t('period_24h') })}
+                                        </span>
                                     )}
                                 </span>
                             </>

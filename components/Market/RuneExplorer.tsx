@@ -202,10 +202,14 @@ export const RuneExplorer: React.FC = () => {
                         {status === 'ready' && items.map((item, i) => {
                             const market = item.market;
                             const usdPrice = market ? toUsd(market.curPrice) : null;
-                            // UniSat reports 0% for runes that did not trade in the period; that is "unknown", not "flat"
                             const traded = !!market && market.btcVolume > 0;
-                            const change = traded ? market.changePercent : null;
+                            const change = market?.change ?? null;
                             const noTradesHint = market && !traded ? t('no_trades', { period: periodLabel }) : undefined;
+                            // Say where the number comes from, or why there is none
+                            const changeHint = !market ? undefined
+                                : change !== null
+                                    ? t(market.changeSource === 'coingecko' ? 'change_source_coingecko' : 'change_source_sales')
+                                    : noTradesHint ?? t('change_unavailable');
                             return (
                                 <tr
                                     key={item.runeId}
@@ -245,8 +249,8 @@ export const RuneExplorer: React.FC = () => {
                                         ) : '—'}
                                     </td>
                                     <td
-                                        className={`${tableStyles.td} ${styles.numeric} ${change === null || change === 0 ? '' : change > 0 ? tableStyles.changePositive : tableStyles.changeNegative} ${noTradesHint ? styles.noTrades : ''}`}
-                                        title={noTradesHint}
+                                        className={`${tableStyles.td} ${styles.numeric} ${change === null ? styles.noTrades : change > 0 ? tableStyles.changePositive : change < 0 ? tableStyles.changeNegative : ''} ${changeHint ? styles.hinted : ''}`}
+                                        title={changeHint}
                                     >
                                         {formatChange(change)}
                                     </td>

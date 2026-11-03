@@ -1,6 +1,8 @@
 'use server';
 
-import { clampInt } from './validation';
+import { unstable_cache } from 'next/cache';
+import { clampInt, isValidRuneId } from './validation';
+import type { MarketPeriod } from './unisatApi';
 
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 
@@ -199,4 +201,71 @@ export async function getRunesPrices(tickers: string[]): Promise<Record<string, 
     }
 
     return prices;
+}
+
+// ---------------------------------------------------------------------------
+// Price change of runes listed on CoinGecko (aggregated across exchanges and marketplaces)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rune ID -> CoinGecko coin ID. CoinGecko lists runes on its "ordinals" platform with the rune ID as
+ * the address, so matching is exact (no name guessing). The full coin list is ~4MB, over the 2MB
+ * fetch cache limit, so it is fetched uncached and only the small derived map is cached for a day.
+ */
+const getRuneCoinIds = unstable_cache(
+    async (): Promise<Record<string, string>> => {
+        const res = await fetch(`${COINGECKO_BASE_URL}/coins/list?include_platform=true`, { cache: 'no-store' });
+        // Throwing keeps a failed or throttled response out of the cache
+        if (!res.ok) throw new Error(`CoinGecko coins list: HTTP ${res.status}`);
+        const coins = await res.json();
+        if (!Array.isArray(coins)) throw new Error('CoinGecko coins list: unexpected response');
+
+        const ids: Record<string, string> = {};
+        for (const coin of coins) {
+            const runeId = coin?.platforms?.ordinals;
+            if (typeof coin?.id === 'string' && isValidRuneId(runeId)) ids[runeId] = coin.id;
+        }
+        return ids;
+    },
+    ['coingecko-rune-coin-ids'],
+    { revalidate: 86400 },
+);
+
+export type RuneChanges = Record<string, Record<MarketPeriod, number | null>>;
+
+/**
+ * 24h/7d/30d price change (as fractions) of every rune CoinGecko tracks, keyed by rune ID.
+ * Returns an empty map when CoinGecko is unavailable.
+ */
+export async function getCoinGeckoRuneChanges(): Promise<RuneChanges> {
+    try {
+        const coinIds = await getRuneCoinIds();
+        const runeByCoin = new Map(Object.entries(coinIds).map(([runeId, coinId]) => [coinId, runeId]));
+        if (runeByCoin.size === 0) return {};
+
+        const ids = encodeURIComponent([...runeByCoin.keys()].join(','));
+        const res = await fetch(
+            `${COINGECKO_BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&price_change_percentage=24h,7d,30d`,
+            { cache: 'force-cache', next: { revalidate: 120 } },
+        );
+        if (!res.ok) return {};
+        const markets = await res.json();
+        if (!Array.isArray(markets)) return {};
+
+        const toFraction = (pct: unknown) => (typeof pct === 'number' && Number.isFinite(pct) ? pct / 100 : null);
+        const changes: RuneChanges = {};
+        for (const coin of markets) {
+            const runeId = runeByCoin.get(coin?.id);
+            if (!runeId) continue;
+            changes[runeId] = {
+                '24h': toFraction(coin.price_change_percentage_24h_in_currency ?? coin.price_change_percentage_24h),
+                '7d': toFraction(coin.price_change_percentage_7d_in_currency),
+                '30d': toFraction(coin.price_change_percentage_30d_in_currency),
+            };
+        }
+        return changes;
+    } catch (error) {
+        console.error("getCoinGeckoRuneChanges error:", error);
+        return {};
+    }
 }

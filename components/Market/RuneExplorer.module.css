@@ -144,6 +144,11 @@
     cursor: help;
 }
 
+/* Cells with a tooltip explaining their source */
+.hinted {
+    cursor: help;
+}
+
 .verifiedIcon {
     color: var(--status-success);
     flex-shrink: 0;

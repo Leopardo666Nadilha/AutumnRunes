@@ -9,6 +9,7 @@ import { CandlestickChart, Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { RuneSale } from '../../lib/unisatApi';
 import { formatBtcFromSats, formatSats, formatUsd } from '../../lib/format';
+import { withoutOutliers } from '../../lib/runeSales';
 import chartStyles from '../BitcoinCandleChart.module.css';
 import styles from './RuneMarket.module.css';
 
@@ -24,10 +25,6 @@ const WEEK_OFFSET_SECONDS = 4 * 86400;
 // Start fetching older sales once fewer than this many candles are left before the first one
 const LOAD_MORE_THRESHOLD = 10;
 const INITIAL_VISIBLE_CANDLES = 90;
-// Sales priced far from the sales around them (tiny lots worth only the UTXO's dust value,
-// typos) would dwarf the real price, so candles ignore them
-const OUTLIER_NEIGHBOURS = 10;
-const OUTLIER_FACTOR = 5;
 
 /** Converts sats at a sale's time to USD; null when no BTC price covers that time */
 export type SatsToUsd = (sats: number, timeMs: number) => number | null;
@@ -40,19 +37,6 @@ interface Candle {
     close: number;
     /** Traded value in the bucket, in the chart's unit (USD, or sats without a BTC price) */
     volume: number;
-}
-
-/** Drops sales more than OUTLIER_FACTOR times above or below the median of their neighbours. */
-function withoutOutliers(sorted: RuneSale[]): RuneSale[] {
-    if (sorted.length < 5) return sorted;
-    return sorted.filter((sale, i) => {
-        const prices = sorted
-            .slice(Math.max(0, i - OUTLIER_NEIGHBOURS), i + OUTLIER_NEIGHBOURS + 1)
-            .map((s) => s.unitPrice)
-            .sort((a, b) => a - b);
-        const median = prices[Math.floor(prices.length / 2)];
-        return sale.unitPrice <= median * OUTLIER_FACTOR && sale.unitPrice >= median / OUTLIER_FACTOR;
-    });
 }
 
 /**
