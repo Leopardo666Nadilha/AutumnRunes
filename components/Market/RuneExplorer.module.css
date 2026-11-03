@@ -17,6 +17,15 @@
     color: var(--text-muted);
 }
 
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    flex: 1 1 420px;
+}
+
 .search {
     position: relative;
     display: flex;
@@ -127,6 +136,12 @@
     align-items: center;
     gap: 0.35rem;
     transition: color var(--transition-fast);
+}
+
+/* No trades in the selected period: the value is unknown, not zero */
+.noTrades {
+    color: var(--text-muted);
+    cursor: help;
 }
 
 .verifiedIcon {

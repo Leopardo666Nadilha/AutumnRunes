@@ -93,12 +93,15 @@ export interface RuneInfo {
     mintable: boolean;
 }
 
+/** Window UniSat aggregates price change and volume over */
+export type MarketPeriod = '24h' | '7d' | '30d';
+
 export interface RuneMarketStats {
     /** Price of one whole rune unit, in sats */
     curPrice: number;
-    /** 24h price change as a fraction (0.05 = +5%) */
+    /** Price change over the period as a fraction (0.05 = +5%); 0 when nothing traded */
     changePercent: number;
-    /** 24h traded volume, in sats */
+    /** Traded volume over the period, in sats */
     btcVolume: number;
     capUSD: number | null;
     warning: boolean;
@@ -134,6 +137,7 @@ export interface RuneSale {
 
 // Market lists are ordered by traded volume; one big page doubles as the price lookup for search results
 const MARKET_LOOKUP_SIZE = 499;
+const MARKET_TIME_TYPES: Record<MarketPeriod, string> = { '24h': 'day1', '7d': 'day7', '30d': 'day30' };
 // The activity endpoint rejects limits of 500 or more
 const RUNE_SALES_PAGE_SIZE = 499;
 
@@ -177,22 +181,25 @@ async function postMarket<T>(path: string, body: unknown, revalidate: number): P
     return json?.code === 0 ? (json.data ?? null) : null;
 }
 
-async function fetchMarketPage(start: number, limit: number) {
+async function fetchMarketPage(start: number, limit: number, period: unknown) {
+    // Unknown periods (the argument comes from the client) fall back to 24h
+    const timeType = MARKET_TIME_TYPES[period as MarketPeriod] ?? MARKET_TIME_TYPES['24h'];
     return postMarket<{ BTCPrice?: number; list?: RawMarketItem[] }>(
         '/v3/market/runes/auction/runes_types',
-        { timeType: 'day1', start, limit },
+        { timeType, start, limit },
         60,
     );
 }
 
 /**
- * Runes ordered by 24h traded volume on the UniSat marketplace.
+ * Runes on the UniSat marketplace ordered by traded volume over `period`;
+ * runes with no trades in the period follow, with zero change and volume.
  */
-export async function getRunesMarketList(start = 0, limit = 50): Promise<RuneListPage | null> {
+export async function getRunesMarketList(start = 0, limit = 50, period: MarketPeriod = '24h'): Promise<RuneListPage | null> {
     const safeStart = clampInt(start, 0, 10_000, 0);
     const safeLimit = clampInt(limit, 1, 100, 50);
     try {
-        const data = await fetchMarketPage(safeStart, safeLimit);
+        const data = await fetchMarketPage(safeStart, safeLimit, period);
         if (!data || !Array.isArray(data.list)) return null;
         const items = data.list
             .filter((raw) => isValidRuneId(raw.runeId) && typeof raw.tick === 'string')
@@ -219,7 +226,7 @@ export async function getRunesMarketList(start = 0, limit = 50): Promise<RuneLis
  * Searches runes by any part of the name (spacers optional) or by exact rune ID, ordered by holders.
  * Prices come from the most traded runes list, so runes without recent trades have no market data.
  */
-export async function searchRunes(query: string, start = 0, limit = 20): Promise<RuneListPage | null> {
+export async function searchRunes(query: string, start = 0, limit = 20, period: MarketPeriod = '24h'): Promise<RuneListPage | null> {
     const normalized = normalizeRuneQuery(query);
     if (!normalized) return null;
     const safeStart = clampInt(start, 0, 10_000, 0);
@@ -231,7 +238,7 @@ export async function searchRunes(query: string, start = 0, limit = 20): Promise
                 cache: 'force-cache',
                 next: { revalidate: 300 },
             }),
-            fetchMarketPage(0, MARKET_LOOKUP_SIZE).catch(() => null),
+            fetchMarketPage(0, MARKET_LOOKUP_SIZE, period).catch(() => null),
         ]);
         if (!searchRes.ok) return null;
         const json = await searchRes.json();

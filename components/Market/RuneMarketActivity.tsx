@@ -1,12 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ExternalLink, Receipt } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { formatRuneAmount } from '../../lib/runes';
 import { formatBtcFromSats, formatSats, formatUsd } from '../../lib/format';
 import { Skeleton } from '../Skeleton';
-import { RuneCandleChart } from './RuneCandleChart';
+import { RuneCandleChart, type SatsToUsd } from './RuneCandleChart';
+import { useBtcDailyPrices } from './useBtcDailyPrices';
 import { useRuneSales } from './useRuneSales';
 import tableStyles from '../RunesTable.module.css';
 import explorerStyles from './RuneExplorer.module.css';
@@ -17,6 +17,7 @@ const RECENT_SALES = 20;
 interface RuneMarketActivityProps {
     spacedRune: string;
     divisibility: number;
+    /** Current BTC/USD, used when the daily history is unavailable */
     btcUsd: number | null;
 }
 
@@ -25,18 +26,30 @@ export const RuneMarketActivity: React.FC<RuneMarketActivityProps> = ({ spacedRu
     const t = useTranslations('Marketplace');
     const locale = useLocale();
     const { sales, status, hasMore, isLoadingMore, loadMore } = useRuneSales(spacedRune);
+    const btcDaily = useBtcDailyPrices();
+    const { usdAt } = btcDaily;
 
+    // Each sale is converted with the BTC price of its own day, so old sales aren't valued at today's BTC
+    const toUsd = useCallback<SatsToUsd>((sats, timeMs) => {
+        const btcPrice = usdAt?.(timeMs) ?? btcUsd;
+        return btcPrice ? (sats * btcPrice) / 1e8 : null;
+    }, [usdAt, btcUsd]);
+
+    const pricesLoading = btcDaily.status === 'loading';
+    const canConvert = usdAt !== null || btcUsd !== null;
     const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' });
     const recent = sales.slice(0, RECENT_SALES);
 
     return (
         <>
             <RuneCandleChart
-                sales={sales}
-                status={status}
+                // Wait for BTC prices so the chart is framed once, already in its final unit
+                sales={pricesLoading ? [] : sales}
+                status={pricesLoading ? 'loading' : status}
                 hasMore={hasMore}
                 isLoadingMore={isLoadingMore}
                 onLoadMore={loadMore}
+                toUsd={canConvert ? toUsd : null}
             />
 
             <section className={tableStyles.tableCard}>
@@ -71,40 +84,49 @@ export const RuneMarketActivity: React.FC<RuneMarketActivityProps> = ({ spacedRu
                                 </tr>
                             )}
 
-                            {recent.map((sale) => (
-                                <tr key={sale.id} className={tableStyles.tr}>
-                                    <td className={`${tableStyles.td} ${styles.muted}`}>{dateFormat.format(sale.time)}</td>
-                                    <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
-                                        {formatRuneAmount(sale.amount, divisibility)}
-                                    </td>
-                                    <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
-                                        <span>{formatSats(sale.unitPrice)} sats</span>
-                                        {btcUsd && (
-                                            <span className={explorerStyles.subValue}>{formatUsd((sale.unitPrice * btcUsd) / 1e8)}</span>
-                                        )}
-                                    </td>
-                                    <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
-                                        <span>{formatBtcFromSats(sale.price)}</span>
-                                        {btcUsd && (
-                                            <span className={explorerStyles.subValue}>{formatUsd((sale.price * btcUsd) / 1e8)}</span>
-                                        )}
-                                    </td>
-                                    <td className={`${tableStyles.td} ${styles.linkCell}`}>
-                                        {sale.txid && (
-                                            <a
-                                                href={`https://mempool.space/tx/${sale.txid}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.iconLink}
-                                                aria-label={t('view_tx')}
-                                                title={t('view_tx')}
-                                            >
-                                                <ExternalLink size={14} />
-                                            </a>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
+                            {recent.map((sale) => {
+                                const unitUsd = toUsd(sale.unitPrice, sale.time);
+                                const totalUsd = toUsd(sale.price, sale.time);
+                                return (
+                                    <tr key={sale.id} className={tableStyles.tr}>
+                                        <td className={`${tableStyles.td} ${styles.muted}`}>{dateFormat.format(sale.time)}</td>
+                                        <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
+                                            {/* Same number format as the prices beside it, so "491.356" can't read as 491 thousand */}
+                                            {sale.amount.toLocaleString('en-US', { maximumFractionDigits: divisibility })}
+                                        </td>
+                                        <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
+                                            {unitUsd !== null ? (
+                                                <>
+                                                    <span>{formatUsd(unitUsd)}</span>
+                                                    <span className={explorerStyles.subValue}>{formatSats(sale.unitPrice)} sats</span>
+                                                </>
+                                            ) : `${formatSats(sale.unitPrice)} sats`}
+                                        </td>
+                                        <td className={`${tableStyles.td} ${explorerStyles.numeric}`}>
+                                            {totalUsd !== null ? (
+                                                <>
+                                                    <span>{formatUsd(totalUsd)}</span>
+                                                    <span className={explorerStyles.subValue}>{formatBtcFromSats(sale.price)}</span>
+                                                </>
+                                            ) : formatBtcFromSats(sale.price)}
+                                        </td>
+                                        <td className={`${tableStyles.td} ${styles.linkCell}`}>
+                                            {sale.txid && (
+                                                <a
+                                                    href={`https://mempool.space/tx/${sale.txid}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.iconLink}
+                                                    aria-label={t('view_tx')}
+                                                    title={t('view_tx')}
+                                                >
+                                                    <ExternalLink size={14} />
+                                                </a>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

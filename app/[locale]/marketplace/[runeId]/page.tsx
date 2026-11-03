@@ -80,6 +80,8 @@ export default async function RunePage({ params }: RunePageProps) {
     const etchedBlock = t('etched_block', { height: info.height.toLocaleString('en-US') });
 
     const change = stats?.changePercent ?? 0;
+    // UniSat reports 0% when nothing traded in 24h; say so instead of showing a flat price
+    const traded24h = !!stats && stats.btcVolume > 0;
     const statCards: { label: string; value: string; title?: string; sub?: React.ReactNode }[] = [
         {
             label: t('stat_market_cap'),
@@ -87,8 +89,8 @@ export default async function RunePage({ params }: RunePageProps) {
         },
         {
             label: t('stat_volume'),
-            value: stats ? formatBtcFromSats(stats.btcVolume) : '—',
-            sub: stats ? formatCompactUsd(toUsd(stats.btcVolume)) : undefined,
+            value: !stats ? '—' : btcUsd ? formatCompactUsd(toUsd(stats.btcVolume)) : formatBtcFromSats(stats.btcVolume),
+            sub: stats && btcUsd ? formatBtcFromSats(stats.btcVolume) : undefined,
         },
         {
             label: t('stat_holders'),
@@ -170,14 +172,22 @@ export default async function RunePage({ params }: RunePageProps) {
                     <div className={styles.priceBlock}>
                         {stats ? (
                             <>
-                                <span className={styles.price}>
-                                    {formatSats(stats.curPrice)} <span className={styles.priceUnit}>sats</span>
-                                </span>
-                                <span className={styles.priceSub}>
-                                    <span>{formatUsd(toUsd(stats.curPrice))}</span>
-                                    <span className={change > 0 ? tableStyles.changePositive : change < 0 ? tableStyles.changeNegative : ''}>
-                                        {formatChange(change)} · 24h
+                                {btcUsd ? (
+                                    <span className={styles.price}>{formatUsd(toUsd(stats.curPrice))}</span>
+                                ) : (
+                                    <span className={styles.price}>
+                                        {formatSats(stats.curPrice)} <span className={styles.priceUnit}>sats</span>
                                     </span>
+                                )}
+                                <span className={styles.priceSub}>
+                                    {btcUsd && <span>{formatSats(stats.curPrice)} sats</span>}
+                                    {traded24h ? (
+                                        <span className={change > 0 ? tableStyles.changePositive : change < 0 ? tableStyles.changeNegative : ''}>
+                                            {formatChange(change)} · 24h
+                                        </span>
+                                    ) : (
+                                        <span className={styles.noTrades}>{t('no_trades', { period: t('period_24h') })}</span>
+                                    )}
                                 </span>
                             </>
                         ) : (

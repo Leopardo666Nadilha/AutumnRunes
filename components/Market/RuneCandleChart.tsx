@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    createChart, CandlestickData, CandlestickSeries, CrosshairMode, HistogramData, HistogramSeries,
+    createChart, CandlestickSeries, CrosshairMode, HistogramSeries,
     IChartApi, ISeriesApi, LogicalRange, PriceScaleMode, Time,
 } from 'lightweight-charts';
 import { CandlestickChart, Loader2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { RuneSale } from '../../lib/unisatApi';
-import { formatBtcFromSats, formatSats } from '../../lib/format';
+import { formatBtcFromSats, formatSats, formatUsd } from '../../lib/format';
 import chartStyles from '../BitcoinCandleChart.module.css';
 import styles from './RuneMarket.module.css';
 
@@ -29,13 +29,16 @@ const INITIAL_VISIBLE_CANDLES = 90;
 const OUTLIER_NEIGHBOURS = 10;
 const OUTLIER_FACTOR = 5;
 
+/** Converts sats at a sale's time to USD; null when no BTC price covers that time */
+export type SatsToUsd = (sats: number, timeMs: number) => number | null;
+
 interface Candle {
     time: number;
     open: number;
     high: number;
     low: number;
     close: number;
-    /** Traded sats in the bucket */
+    /** Traded value in the bucket, in the chart's unit (USD, or sats without a BTC price) */
     volume: number;
 }
 
@@ -52,31 +55,38 @@ function withoutOutliers(sorted: RuneSale[]): RuneSale[] {
     });
 }
 
-/** Groups sales into OHLC candles of `seconds`, using each sale's price per unit. */
-function toCandles(sales: RuneSale[], seconds: number): Candle[] {
+/**
+ * Groups sales into OHLC candles of `seconds` using each sale's price per unit, in USD when
+ * `toUsd` is given (outliers are judged in sats, before BTC's own moves get mixed in).
+ */
+function toCandles(sales: RuneSale[], seconds: number, toUsd: SatsToUsd | null): Candle[] {
     const offset = seconds === WEEK_SECONDS ? WEEK_OFFSET_SECONDS : 0;
     const sorted = withoutOutliers([...sales].sort((a, b) => a.time - b.time));
     const candles: Candle[] = [];
     for (const sale of sorted) {
+        const price = toUsd ? toUsd(sale.unitPrice, sale.time) : sale.unitPrice;
+        const volume = toUsd ? toUsd(sale.price, sale.time) : sale.price;
+        if (price === null || volume === null) continue;
+
         const bucket = Math.floor((Math.floor(sale.time / 1000) - offset) / seconds) * seconds + offset;
         const last = candles[candles.length - 1];
         if (last && last.time === bucket) {
-            last.high = Math.max(last.high, sale.unitPrice);
-            last.low = Math.min(last.low, sale.unitPrice);
-            last.close = sale.unitPrice;
-            last.volume += sale.price;
+            last.high = Math.max(last.high, price);
+            last.low = Math.min(last.low, price);
+            last.close = price;
+            last.volume += volume;
         } else {
-            candles.push({
-                time: bucket,
-                open: sale.unitPrice,
-                high: sale.unitPrice,
-                low: sale.unitPrice,
-                close: sale.unitPrice,
-                volume: sale.price,
-            });
+            candles.push({ time: bucket, open: price, high: price, low: price, close: price, volume });
         }
     }
     return candles;
+}
+
+/** Price step small enough for the cheapest candle to keep ~4 significant digits on the axis */
+function minMoveFor(candles: Candle[]): number {
+    let min = Infinity;
+    for (const c of candles) if (c.low > 0 && c.low < min) min = c.low;
+    return Number.isFinite(min) ? Math.max(10 ** (Math.floor(Math.log10(min)) - 3), 1e-15) : 1e-8;
 }
 
 interface RuneCandleChartProps {
@@ -85,9 +95,11 @@ interface RuneCandleChartProps {
     hasMore: boolean;
     isLoadingMore: boolean;
     onLoadMore: () => void;
+    /** Converts to USD; null keeps the chart in sats (no BTC price available) */
+    toUsd: SatsToUsd | null;
 }
 
-export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status, hasMore, isLoadingMore, onLoadMore }) => {
+export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status, hasMore, isLoadingMore, onLoadMore, toUsd }) => {
     const t = useTranslations('Marketplace');
     const tChart = useTranslations('Chart');
     const locale = useLocale();
@@ -98,12 +110,16 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
     // Timeframe the current view was framed for; reframe only when it changes
     const framedTimeframeRef = useRef<number | null>(null);
     const firstCandleTimeRef = useRef<number | null>(null);
+    // Candles by time, so the hover legend shows exact values in the chart's unit
+    const candlesByTimeRef = useRef(new Map<number, Candle>());
     const loadMoreRef = useRef({ hasMore, isLoadingMore, onLoadMore });
 
     const [timeframe, setTimeframe] = useState(86400);
     const [hovered, setHovered] = useState<Candle | null>(null);
 
-    const candles = useMemo(() => toCandles(sales, timeframe), [sales, timeframe]);
+    const candles = useMemo(() => toCandles(sales, timeframe, toUsd), [sales, timeframe, toUsd]);
+    const isUsd = toUsd !== null;
+    const formatPrice = isUsd ? formatUsd : formatSats;
 
     // The chart's range listener is registered once, so it reads the latest props from a ref
     useEffect(() => {
@@ -158,7 +174,7 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
             borderDownColor: '#ef4444',
             wickUpColor: '#f7931a',
             wickDownColor: '#ef4444',
-            // Prices range from fractions of a sat to thousands of sats
+            // Replaced with the real unit and step once data arrives
             priceFormat: { type: 'custom', formatter: (price: number) => formatSats(price), minMove: 1e-8 },
         });
 
@@ -175,20 +191,8 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
         volumeSeriesRef.current = volumeSeries;
 
         chart.subscribeCrosshairMove((param) => {
-            const candle = param.time ? param.seriesData.get(candleSeries) as CandlestickData<Time> | undefined : undefined;
-            if (!candle) {
-                setHovered(null);
-                return;
-            }
-            const volume = param.seriesData.get(volumeSeries) as HistogramData<Time> | undefined;
-            setHovered({
-                time: candle.time as number,
-                open: candle.open,
-                high: candle.high,
-                low: candle.low,
-                close: candle.close,
-                volume: (volume?.value ?? 0) * 1e8,
-            });
+            const candle = param.time ? candlesByTimeRef.current.get(param.time as number) : undefined;
+            setHovered(candle ?? null);
         });
 
         const onVisibleRangeChange = (range: LogicalRange | null) => {
@@ -230,7 +234,12 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
         const previousRange = chart.timeScale().getVisibleLogicalRange();
         const previousFirstTime = firstCandleTimeRef.current;
         firstCandleTimeRef.current = candles[0]?.time ?? null;
+        candlesByTimeRef.current = new Map(candles.map((c) => [c.time, c]));
 
+        // Prices range from fractions of a cent (or sat) to thousands
+        candleSeries.applyOptions({
+            priceFormat: { type: 'custom', formatter: (price: number) => formatPrice(price), minMove: minMoveFor(candles) },
+        });
         candleSeries.setData(candles.map((c) => ({
             time: c.time as Time,
             open: c.open,
@@ -240,7 +249,7 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
         })));
         volumeSeries.setData(candles.map((c) => ({
             time: c.time as Time,
-            value: c.volume / 1e8,
+            value: isUsd ? c.volume : c.volume / 1e8,
             color: c.close >= c.open ? 'rgba(247, 147, 26, 0.35)' : 'rgba(239, 68, 68, 0.35)',
         })));
 
@@ -265,7 +274,7 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
                 });
             }
         }
-    }, [candles, timeframe]);
+    }, [candles, timeframe, isUsd, formatPrice]);
 
     // Axis dates follow the app language instead of the browser's
     useEffect(() => {
@@ -293,9 +302,9 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
                 <div className={styles.chartHeading}>
                     <div className={chartStyles.chartTitle}>
                         <CandlestickChart size={20} />
-                        <span>{t('chart_title')}</span>
+                        <span>{t(isUsd ? 'chart_title_usd' : 'chart_title')}</span>
                     </div>
-                    <span className={styles.chartSource}>{t('chart_source')}</span>
+                    <span className={styles.chartSource}>{t(isUsd ? 'chart_source_usd' : 'chart_source')}</span>
                 </div>
                 <div className={chartStyles.toolbar}>
                     {TIMEFRAMES.map((tf) => (
@@ -314,11 +323,11 @@ export const RuneCandleChart: React.FC<RuneCandleChartProps> = ({ sales, status,
             <div className={chartStyles.ohlcLegend}>
                 {hovered ? (
                     <>
-                        <span><span className={chartStyles.ohlcLabel}>O </span><span className={chartStyles.ohlcValue}>{formatSats(hovered.open)}</span></span>
-                        <span><span className={chartStyles.ohlcLabel}>H </span><span className={chartStyles.ohlcValue}>{formatSats(hovered.high)}</span></span>
-                        <span><span className={chartStyles.ohlcLabel}>L </span><span className={chartStyles.ohlcValue}>{formatSats(hovered.low)}</span></span>
-                        <span><span className={chartStyles.ohlcLabel}>C </span><span className={chartStyles.ohlcValue}>{formatSats(hovered.close)}</span></span>
-                        <span><span className={chartStyles.ohlcLabel}>Vol </span><span className={chartStyles.ohlcValue}>{formatBtcFromSats(hovered.volume)}</span></span>
+                        <span><span className={chartStyles.ohlcLabel}>O </span><span className={chartStyles.ohlcValue}>{formatPrice(hovered.open)}</span></span>
+                        <span><span className={chartStyles.ohlcLabel}>H </span><span className={chartStyles.ohlcValue}>{formatPrice(hovered.high)}</span></span>
+                        <span><span className={chartStyles.ohlcLabel}>L </span><span className={chartStyles.ohlcValue}>{formatPrice(hovered.low)}</span></span>
+                        <span><span className={chartStyles.ohlcLabel}>C </span><span className={chartStyles.ohlcValue}>{formatPrice(hovered.close)}</span></span>
+                        <span><span className={chartStyles.ohlcLabel}>Vol </span><span className={chartStyles.ohlcValue}>{isUsd ? formatUsd(hovered.volume) : formatBtcFromSats(hovered.volume)}</span></span>
                     </>
                 ) : (
                     <span className={styles.hint}>{tChart('hover_hint')}</span>

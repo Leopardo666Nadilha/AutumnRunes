@@ -116,6 +116,10 @@
     color: var(--text-secondary);
 }
 
+.noTrades {
+    color: var(--text-muted);
+}
+
 .noMarket {
     font-size: 0.875rem;
     color: var(--text-muted);

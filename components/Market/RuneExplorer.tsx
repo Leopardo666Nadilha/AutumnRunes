@@ -4,24 +4,28 @@ import React, { useEffect, useRef, useState } from 'react';
 import { BadgeCheck, Compass, Loader2, Search, ShieldAlert, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from '@/i18n/routing';
-import { getRunesMarketList, searchRunes, type RuneListItem, type RuneListPage } from '../../lib/unisatApi';
+import {
+    getRunesMarketList, searchRunes, type MarketPeriod, type RuneListItem, type RuneListPage,
+} from '../../lib/unisatApi';
 import { normalizeRuneQuery } from '../../lib/validation';
 import { formatBtcFromSats, formatChange, formatCompactUsd, formatSats, formatUsd } from '../../lib/format';
 import { Skeleton } from '../Skeleton';
 import tableStyles from '../RunesTable.module.css';
+import chartStyles from '../BitcoinCandleChart.module.css';
 import styles from './RuneExplorer.module.css';
 
 const MARKET_PAGE_SIZE = 50;
 const SEARCH_PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 350;
 const COLUMN_COUNT = 7;
+const PERIODS: MarketPeriod[] = ['24h', '7d', '30d'];
 
 type Status = 'loading' | 'ready' | 'error';
 
-function fetchPage(term: string, start: number): Promise<RuneListPage | null> {
+function fetchPage(term: string, period: MarketPeriod, start: number): Promise<RuneListPage | null> {
     return term
-        ? searchRunes(term, start, SEARCH_PAGE_SIZE)
-        : getRunesMarketList(start, MARKET_PAGE_SIZE);
+        ? searchRunes(term, start, SEARCH_PAGE_SIZE, period)
+        : getRunesMarketList(start, MARKET_PAGE_SIZE, period);
 }
 
 export const RuneExplorer: React.FC = () => {
@@ -29,22 +33,24 @@ export const RuneExplorer: React.FC = () => {
     const router = useRouter();
 
     const [query, setQuery] = useState('');
+    const [period, setPeriod] = useState<MarketPeriod>('24h');
     const [term, setTerm] = useState('');
     const [items, setItems] = useState<RuneListItem[]>([]);
     const [btcPrice, setBtcPrice] = useState<number | null>(null);
     const [hasMore, setHasMore] = useState(false);
     const [status, setStatus] = useState<Status>('loading');
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    // null until the first load, so the initial empty term still triggers it
-    const termRef = useRef<string | null>(null);
+    // Last loaded "period|term"; null until the first load so the initial empty search still runs
+    const loadedKeyRef = useRef<string | null>(null);
     const requestIdRef = useRef(0);
 
-    // Debounce typing, then load the most traded runes (empty search) or the search results
+    // Debounce typing, then load the market list (empty search) or the search results
     useEffect(() => {
         const next = query.trim();
+        const key = `${period}|${next}`;
         const timer = setTimeout(async () => {
-            if (next === termRef.current) return;
-            termRef.current = next;
+            if (key === loadedKeyRef.current) return;
+            loadedKeyRef.current = key;
             const requestId = ++requestIdRef.current;
             setTerm(next);
             setItems([]);
@@ -58,7 +64,7 @@ export const RuneExplorer: React.FC = () => {
             }
 
             setStatus('loading');
-            const page = await fetchPage(next, 0);
+            const page = await fetchPage(next, period, 0);
             if (requestId !== requestIdRef.current) return;
             if (!page) {
                 setStatus('error');
@@ -68,16 +74,16 @@ export const RuneExplorer: React.FC = () => {
             setHasMore(page.hasMore);
             if (page.btcPrice) setBtcPrice(page.btcPrice);
             setStatus('ready');
-        }, next ? SEARCH_DEBOUNCE_MS : 0);
+        }, next && next !== loadedKeyRef.current?.split('|')[1] ? SEARCH_DEBOUNCE_MS : 0);
         return () => clearTimeout(timer);
-    }, [query]);
+    }, [query, period]);
 
     const loadMore = async () => {
         if (isLoadingMore) return;
         const requestId = requestIdRef.current;
         setIsLoadingMore(true);
-        const page = await fetchPage(term, items.length);
-        // The search changed while this page was loading
+        const page = await fetchPage(term, period, items.length);
+        // The search or period changed while this page was loading
         if (requestId !== requestIdRef.current) return;
         setIsLoadingMore(false);
         if (!page) return;
@@ -95,9 +101,12 @@ export const RuneExplorer: React.FC = () => {
         router.push(`/marketplace/${runeId}`);
     };
 
+    const periodLabel = t(`period_${period}`);
+    const toUsd = (sats: number) => (btcPrice ? (sats * btcPrice) / 1e8 : null);
+
     const caption = term
         ? (status === 'ready' ? t('search_results', { term }) : t('searching', { term }))
-        : t('top_traded');
+        : t('market_sorted', { period: periodLabel });
 
     return (
         <section className={tableStyles.tableCard}>
@@ -110,29 +119,45 @@ export const RuneExplorer: React.FC = () => {
                     <span className={styles.caption}>{caption}</span>
                 </div>
 
-                <div className={styles.search}>
-                    <Search size={16} className={styles.searchIcon} />
-                    <input
-                        type="search"
-                        className={styles.searchInput}
-                        placeholder={t('search_placeholder')}
-                        aria-label={t('search_placeholder')}
-                        value={query}
-                        maxLength={64}
-                        autoComplete="off"
-                        spellCheck={false}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                    {query && (
-                        <button
-                            type="button"
-                            className={styles.clearBtn}
-                            aria-label={t('clear_search')}
-                            onClick={() => setQuery('')}
-                        >
-                            <X size={14} />
-                        </button>
-                    )}
+                <div className={styles.controls}>
+                    <div className={chartStyles.toolbar} role="group" aria-label={t('period_label')}>
+                        {PERIODS.map((p) => (
+                            <button
+                                key={p}
+                                type="button"
+                                className={`${chartStyles.intervalBtn} ${period === p ? chartStyles.intervalBtnActive : ''}`}
+                                aria-pressed={period === p}
+                                onClick={() => setPeriod(p)}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className={styles.search}>
+                        <Search size={16} className={styles.searchIcon} />
+                        <input
+                            type="search"
+                            className={styles.searchInput}
+                            placeholder={t('search_placeholder')}
+                            aria-label={t('search_placeholder')}
+                            value={query}
+                            maxLength={64}
+                            autoComplete="off"
+                            spellCheck={false}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                        {query && (
+                            <button
+                                type="button"
+                                className={styles.clearBtn}
+                                aria-label={t('clear_search')}
+                                onClick={() => setQuery('')}
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -143,8 +168,8 @@ export const RuneExplorer: React.FC = () => {
                             <th className={tableStyles.th}>#</th>
                             <th className={tableStyles.th}>{t('col_rune')}</th>
                             <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_price')}</th>
-                            <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_change')}</th>
-                            <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_volume')}</th>
+                            <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_change', { period })}</th>
+                            <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_volume', { period })}</th>
                             <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_market_cap')}</th>
                             <th className={`${tableStyles.th} ${styles.numeric}`}>{t('col_holders')}</th>
                         </tr>
@@ -176,8 +201,11 @@ export const RuneExplorer: React.FC = () => {
 
                         {status === 'ready' && items.map((item, i) => {
                             const market = item.market;
-                            const usdPrice = market && btcPrice ? (market.curPrice * btcPrice) / 1e8 : null;
-                            const change = market?.changePercent ?? null;
+                            const usdPrice = market ? toUsd(market.curPrice) : null;
+                            // UniSat reports 0% for runes that did not trade in the period; that is "unknown", not "flat"
+                            const traded = !!market && market.btcVolume > 0;
+                            const change = traded ? market.changePercent : null;
+                            const noTradesHint = market && !traded ? t('no_trades', { period: periodLabel }) : undefined;
                             return (
                                 <tr
                                     key={item.runeId}
@@ -208,17 +236,29 @@ export const RuneExplorer: React.FC = () => {
                                     </td>
                                     <td className={`${tableStyles.td} ${styles.numeric}`}>
                                         {market ? (
-                                            <>
-                                                <span>{formatSats(market.curPrice)} sats</span>
-                                                <span className={styles.subValue}>{formatUsd(usdPrice)}</span>
-                                            </>
+                                            usdPrice !== null ? (
+                                                <>
+                                                    <span>{formatUsd(usdPrice)}</span>
+                                                    <span className={styles.subValue}>{formatSats(market.curPrice)} sats</span>
+                                                </>
+                                            ) : `${formatSats(market.curPrice)} sats`
                                         ) : '—'}
                                     </td>
-                                    <td className={`${tableStyles.td} ${styles.numeric} ${change === null || change === 0 ? '' : change > 0 ? tableStyles.changePositive : tableStyles.changeNegative}`}>
+                                    <td
+                                        className={`${tableStyles.td} ${styles.numeric} ${change === null || change === 0 ? '' : change > 0 ? tableStyles.changePositive : tableStyles.changeNegative} ${noTradesHint ? styles.noTrades : ''}`}
+                                        title={noTradesHint}
+                                    >
                                         {formatChange(change)}
                                     </td>
-                                    <td className={`${tableStyles.td} ${styles.numeric}`}>
-                                        {market ? formatBtcFromSats(market.btcVolume) : '—'}
+                                    <td className={`${tableStyles.td} ${styles.numeric} ${noTradesHint ? styles.noTrades : ''}`} title={noTradesHint}>
+                                        {traded ? (
+                                            toUsd(market.btcVolume) !== null ? (
+                                                <>
+                                                    <span>{formatCompactUsd(toUsd(market.btcVolume))}</span>
+                                                    <span className={styles.subValue}>{formatBtcFromSats(market.btcVolume)}</span>
+                                                </>
+                                            ) : formatBtcFromSats(market.btcVolume)
+                                        ) : '—'}
                                     </td>
                                     <td className={`${tableStyles.td} ${styles.numeric}`}>
                                         {formatCompactUsd(market?.capUSD)}
