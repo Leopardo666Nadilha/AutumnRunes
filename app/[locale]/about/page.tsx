@@ -1,21 +1,34 @@
 import React from 'react';
 import { getTranslations } from 'next-intl/server';
 import {
-    Blocks, CalendarDays, Code, Compass, Database, Eye, Gem, Layers, ShieldCheck, Wallet,
+    ArrowRight, Blocks, CalendarDays, Coins, Code, Compass, Database, Eye, Flame, Gem,
+    Hammer, Layers, Send, ShieldCheck, Wallet,
 } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 import { DashboardLayout } from '../../../components/DashboardLayout';
-import { getRunesInfoList } from '../../../lib/unisatApi';
+import { getRuneInfo, getRunesInfoList } from '../../../lib/unisatApi';
+import { toRuneAmount } from '../../../lib/runes';
+import { formatCompactNumber } from '../../../lib/format';
 import styles from './about.module.css';
 
+const EXAMPLE_RUNE_ID = '840000:3';
+
 export default async function AboutPage() {
-    const [t, runesList] = await Promise.all([
+    const [t, runesList, example] = await Promise.all([
         getTranslations('About'),
         getRunesInfoList(0, 1),
+        getRuneInfo(EXAMPLE_RUNE_ID),
     ]);
 
     const height = typeof runesList?.height === 'number' ? runesList.height : null;
     const totalRunes = typeof runesList?.total === 'number' ? runesList.total : null;
+
+    const lifecycle = [
+        { icon: Hammer, key: 'etch' },
+        { icon: Coins, key: 'mint' },
+        { icon: Send, key: 'transfer' },
+        { icon: Flame, key: 'burn' },
+    ] as const;
 
     const basics = [
         { icon: Layers, key: 'utxo' },
@@ -26,6 +39,29 @@ export default async function AboutPage() {
     const comparisonRows = ['network', 'balances', 'data', 'transfer', 'utxos', 'indexer'] as const;
 
     const sources = ['unisat', 'coingecko', 'binance', 'mempool'] as const;
+
+    // Anatomy of a real rune; the section is skipped if the indexer is unavailable
+    const anatomy = example ? (() => {
+        const supply = toRuneAmount(example.supply, example.divisibility);
+        const premine = toRuneAmount(example.premine, example.divisibility);
+        const [block, tx] = example.runeid.split(':');
+        return [
+            { label: t('anatomy_name'), value: example.spacedRune, hint: t('anatomy_name_hint', { rune: example.rune }) },
+            { label: t('anatomy_symbol'), value: example.symbol || '¤', hint: t('anatomy_symbol_hint') },
+            { label: t('anatomy_id'), value: example.runeid, hint: t('anatomy_id_hint', { block: Number(block), tx: Number(tx) }) },
+            {
+                label: t('anatomy_divisibility'),
+                value: String(example.divisibility),
+                hint: t('anatomy_divisibility_hint', { units: 10 ** example.divisibility }),
+            },
+            { label: t('anatomy_supply'), value: formatCompactNumber(supply), hint: t('anatomy_supply_hint') },
+            {
+                label: t('anatomy_premine'),
+                value: supply > 0 ? `${Number(((premine / supply) * 100).toFixed(2))}%` : '—',
+                hint: example.terms ? t('anatomy_premine_hint_mint') : t('anatomy_premine_hint_all'),
+            },
+        ];
+    })() : null;
 
     return (
         <DashboardLayout>
@@ -74,6 +110,60 @@ export default async function AboutPage() {
                         ))}
                     </div>
                 </section>
+
+                {/* Lifecycle */}
+                <section className={styles.section}>
+                    <div className={styles.sectionHeader}>
+                        <h2 className={styles.sectionTitle}>{t('lifecycle_title')}</h2>
+                        <p className={styles.sectionLead}>{t('lifecycle_lead')}</p>
+                    </div>
+                    <ol className={styles.steps}>
+                        {lifecycle.map(({ icon: Icon, key }, i) => (
+                            <li key={key} className={styles.step}>
+                                <div className={styles.stepHeader}>
+                                    <span className={styles.stepNumber}>{i + 1}</span>
+                                    <Icon size={20} className={styles.stepIcon} />
+                                </div>
+                                <h3 className={styles.stepTitle}>{t(`lifecycle_${key}_title`)}</h3>
+                                <p className={styles.cardText}>{t(`lifecycle_${key}_text`)}</p>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+
+                {/* Anatomy of a real rune */}
+                {example && anatomy && (
+                    <section className={styles.section}>
+                        <div className={styles.sectionHeader}>
+                            <h2 className={styles.sectionTitle}>{t('anatomy_title')}</h2>
+                            <p className={styles.sectionLead}>{t('anatomy_lead', { name: example.spacedRune })}</p>
+                        </div>
+                        <div className={styles.anatomy}>
+                            <div className={styles.anatomyBadge}>
+                                <span className={styles.anatomySymbol}>{example.symbol || '¤'}</span>
+                                <div className={styles.anatomyHeading}>
+                                    <span className={styles.anatomyName}>{example.spacedRune}</span>
+                                    <span className={styles.anatomyMeta}>
+                                        {t('anatomy_holders', { holders: example.holders })}
+                                    </span>
+                                </div>
+                                <Link href={`/marketplace/${example.runeid}`} className={styles.inlineCta}>
+                                    {t('anatomy_link')}
+                                    <ArrowRight size={14} />
+                                </Link>
+                            </div>
+                            <dl className={styles.anatomyFields}>
+                                {anatomy.map((field) => (
+                                    <div key={field.label} className={styles.anatomyField}>
+                                        <dt className={styles.fieldLabel}>{field.label}</dt>
+                                        <dd className={styles.fieldValue}>{field.value}</dd>
+                                        <dd className={styles.fieldHint}>{field.hint}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </div>
+                    </section>
+                )}
 
                 {/* Comparison */}
                 <section className={styles.section}>
